@@ -5,7 +5,7 @@
 <h1 align="center">PhishLens</h1>
 <p align="center">
   <strong>Advanced Phishing Email Analyzer</strong><br>
-  A Burp Suite-style local tool for phishing investigation — runs on Windows, Linux, and macOS.
+Free, local phishing email analyzer — parses .eml/.msg, extracts IOCs, checks SPF/DKIM/DMARC, scores risk 0–100, and optionally enriches with VirusTotal, AbuseIPDB, URLScan, WHOIS, and Claude AI threat intelligence. No cloud. Your emails stay on your machine.Free, local phishing email analyzer — parses .eml/.msg, extracts IOCs, checks SPF/DKIM/DMARC, scores risk 0–100, and optionally enriches with VirusTotal, AbuseIPDB, URLScan, WHOIS, and Claude AI threat intelligence. No cloud. Your emails stay on your machine.
 </p>
 
 <p align="center">
