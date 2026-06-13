@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+echo "[PhishLens] Removing PhishLens..."
+# Remove venv
+rm -rf /usr/share/phishlens/venv
+echo "[PhishLens] Removed."

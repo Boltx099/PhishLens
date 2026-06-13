@@ -1,0 +1,27 @@
+From: "John Smith" <john.smith@company.com>
+To: team@company.com
+Subject: Q3 Report - Please Review
+Date: Mon, 10 Jun 2026 09:15:00 +0000
+Message-ID: <clean.20260610.phishlens-sample@company.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Received: from mail.company.com (203.0.113.10) by mx.company.com; Mon, 10 Jun 2026 09:15:00 +0000
+Authentication-Results: mx.company.com; spf=pass; dkim=pass; dmarc=pass
+X-Mailer: Microsoft Outlook 16.0
+
+Hi team,
+
+Please find the Q3 financial report attached for your review.
+Meeting scheduled for Thursday at 2 PM to discuss findings.
+
+Key highlights:
+- Revenue up 12% YoY
+- Customer acquisition cost down 8%
+- Net promoter score: 67
+
+Let me know if you have questions.
+
+Best,
+John Smith
+Senior Analyst | Company Inc.
+john.smith@company.com | +1 (555) 123-4567

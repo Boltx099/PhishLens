@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhishLens v2 — Advanced Phishing Analyzer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --bg-base:#0a0c10;--bg-surface:#0f1218;--bg-card:#141820;--bg-elevated:#1a2030;
+    --border:#1e2535;--border-bright:#2a3550;
+    --accent-blue:#2196f3;--accent-cyan:#00bcd4;--accent-glow:rgba(33,150,243,0.15);
+    --text-primary:#e8eaf0;--text-secondary:#8892a4;--text-muted:#4a5568;
+    --red:#ef4444;--red-bg:rgba(239,68,68,0.08);--red-border:rgba(239,68,68,0.25);
+    --orange:#f97316;--orange-bg:rgba(249,115,22,0.08);--orange-border:rgba(249,115,22,0.25);
+    --yellow:#eab308;--yellow-bg:rgba(234,179,8,0.08);--yellow-border:rgba(234,179,8,0.25);
+    --green:#22c55e;--green-bg:rgba(34,197,94,0.08);--green-border:rgba(34,197,94,0.25);
+    --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',system-ui,sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh;}
+
+  /* ── Topbar ── */
+  .topbar{background:var(--bg-surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:58px;position:sticky;top:0;z-index:100;}
+  .topbar-brand{display:flex;align-items:center;gap:12px;}
+  .topbar-logo-text{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text-primary);letter-spacing:.04em;}
+  .topbar-logo-text span{color:var(--accent-blue);}
+  .topbar-meta{display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:11px;color:var(--text-muted);}
+  .version{color:var(--accent-blue);background:var(--accent-glow);border:1px solid rgba(33,150,243,0.2);padding:2px 8px;border-radius:3px;letter-spacing:.05em;}
+  .backend-badge{color:var(--green);background:var(--green-bg);border:1px solid var(--green-border);padding:2px 8px;border-radius:3px;letter-spacing:.05em;font-size:10px;}
+  .backend-badge.offline{color:var(--red);background:var(--red-bg);border-color:var(--red-border);}
+  .topbar-status{display:flex;align-items:center;gap:6px;color:var(--text-secondary);}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted);}
+  .status-dot.ready{background:var(--green);box-shadow:0 0 6px var(--green);}
+  .status-dot.scanning{background:var(--accent-blue);box-shadow:0 0 6px var(--accent-blue);animation:pulse 1s infinite;}
+  .status-dot.error{background:var(--red);box-shadow:0 0 6px var(--red);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  /* ── Nav tabs ── */
+  .nav-tabs{display:flex;gap:2px;margin-left:24px;}
+  .nav-tab{background:transparent;border:none;color:var(--text-muted);font-family:var(--mono);font-size:11px;padding:6px 14px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.04em;}
+  .nav-tab:hover{color:var(--text-secondary);}
+  .nav-tab.active{color:var(--accent-blue);border-bottom-color:var(--accent-blue);}
+
+  /* ── Layout ── */
+  .page{display:none;}
+  .page.active{display:block;}
+  .main{max-width:1440px;margin:0 auto;padding:24px 28px 48px;display:grid;grid-template-columns:340px 1fr;gap:20px;}
+  .input-panel{display:flex;flex-direction:column;gap:16px;}
+
+  /* ── Panels ── */
+  .panel{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  .panel-header{background:var(--bg-elevated);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:8px;}
+  .panel-header-icon{width:16px;height:16px;fill:none;stroke:var(--accent-blue);stroke-width:1.5;flex-shrink:0;}
+  .panel-title{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--text-secondary);letter-spacing:.08em;text-transform:uppercase;}
+  .panel-body{padding:16px;}
+
+  /* ── Input ── */
+  .input-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:14px;}
+  .input-tab{background:transparent;border:1px solid var(--border);color:var(--text-muted);font-family:var(--mono);font-size:10px;font-weight:500;padding:6px 4px;border-radius:4px;cursor:pointer;text-align:center;letter-spacing:.04em;transition:all .15s;}
+  .input-tab:hover{border-color:var(--border-bright);color:var(--text-secondary);}
+  .input-tab.active{background:var(--accent-glow);border-color:var(--accent-blue);color:var(--accent-blue);}
+  .input-section{display:none;}
+  .input-section.active{display:block;}
+  textarea{width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:var(--mono);font-size:11px;line-height:1.7;padding:10px 12px;resize:vertical;min-height:180px;outline:none;transition:border-color .15s;}
+  textarea:focus{border-color:var(--accent-blue);}
+  textarea::placeholder{color:var(--text-muted);}
+  .file-drop{background:var(--bg-surface);border:1px dashed var(--border-bright);border-radius:4px;padding:32px 16px;text-align:center;cursor:pointer;transition:all .15s;position:relative;}
+  .file-drop:hover,.file-drop.dragover{border-color:var(--accent-blue);background:var(--accent-glow);}
+  .file-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .file-drop-icon{width:32px;height:32px;stroke:var(--text-muted);fill:none;stroke-width:1.5;margin:0 auto 10px;display:block;}
+  .file-drop p{color:var(--text-secondary);font-size:12px;}
+  .file-drop span{color:var(--text-muted);font-size:11px;font-family:var(--mono);}
+  .file-drop.has-file p{color:var(--green);}
+  .btn-analyze{width:100%;background:var(--accent-blue);color:#fff;border:none;border-radius:4px;padding:11px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .15s;margin-top:14px;}
+  .btn-analyze:hover{background:#1976d2;}
+  .btn-analyze:active{transform:scale(.99);}
+  .btn-analyze:disabled{background:var(--bg-elevated);color:var(--text-muted);cursor:not-allowed;}
+  .btn-clear{width:100%;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:4px;padding:8px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;margin-top:8px;transition:all .15s;}
+  .btn-clear:hover{border-color:var(--border-bright);color:var(--text-secondary);}
+
+  /* ── Results ── */
+  .summary-card{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  .summary-score-row{display:grid;grid-template-columns:auto 1fr auto;gap:20px;padding:20px;align-items:center;border-bottom:1px solid var(--border);}
+  .score-circle{width:88px;height:88px;flex-shrink:0;position:relative;}
+  .score-circle svg{width:88px;height:88px;}
+  .score-circle-track{fill:none;stroke:var(--border);stroke-width:6;}
+  .score-circle-fill{fill:none;stroke-width:6;stroke-linecap:round;transform:rotate(-90deg);transform-origin:44px 44px;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1),stroke .4s;}
+  .score-circle-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+  .score-number{font-family:var(--mono);font-size:22px;font-weight:600;line-height:1;}
+  .score-label{font-size:9px;color:var(--text-muted);letter-spacing:.1em;margin-top:2px;}
+  .verdict-badge{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:4px 12px;border-radius:3px;margin-bottom:8px;}
+  .verdict-badge.CLEAN,.verdict-badge.clean{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+  .verdict-badge.low,.verdict-badge.LOW{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border);}
+  .verdict-badge.medium,.verdict-badge.MEDIUM,.verdict-badge.SUSPICIOUS{background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-border);}
+  .verdict-badge.high,.verdict-badge.HIGH,.verdict-badge[class*="LIKELY"]{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+  .verdict-badge.critical,.verdict-badge.CRITICAL,.verdict-badge.PHISHING{background:rgba(239,68,68,.15);color:#ff6b6b;border:1px solid rgba(239,68,68,.4);}
+  .verdict-title{font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:4px;}
+  .verdict-desc{font-size:12px;color:var(--text-secondary);}
+  .summary-stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border);}
+  .summary-stat{padding:14px 16px;border-right:1px solid var(--border);text-align:center;}
+  .summary-stat:last-child{border-right:none;}
+  .summary-stat-val{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--text-primary);line-height:1;margin-bottom:4px;}
+  .summary-stat-val.red{color:var(--red);}
+  .summary-stat-val.orange{color:var(--orange);}
+  .summary-stat-val.yellow{color:var(--yellow);}
+  .summary-stat-val.green{color:var(--green);}
+  .summary-stat-lbl{font-size:10px;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;}
+  .results-panel{display:flex;flex-direction:column;gap:16px;}
+  .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+  /* ── Tables ── */
+  .data-table{width:100%;border-collapse:collapse;}
+  .data-table th{background:var(--bg-elevated);color:var(--text-muted);font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);}
+  .data-table td{padding:9px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text-primary);vertical-align:top;}
+  .data-table tr:last-child td{border-bottom:none;}
+  .data-table tr:hover td{background:rgba(255,255,255,.02);}
+  .td-label{color:var(--text-secondary);font-size:10px;}
+  .td-val{word-break:break-all;}
+  .td-val.red{color:var(--red);}
+  .td-val.orange{color:var(--orange);}
+  .td-val.yellow{color:var(--yellow);}
+  .td-val.green{color:var(--green);}
+
+  /* ── Checks ── */
+  .check-list{display:flex;flex-direction:column;}
+  .check-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);}
+  .check-item:last-child{border-bottom:none;}
+  .check-icon{width:16px;height:16px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .check-icon.pass{background:var(--green-bg);border:1px solid var(--green-border);}
+  .check-icon.fail{background:var(--red-bg);border:1px solid var(--red-border);}
+  .check-icon.warn{background:var(--yellow-bg);border:1px solid var(--yellow-border);}
+  .check-icon svg{width:8px;height:8px;}
+  .check-content{flex:1;}
+  .check-name{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--text-primary);margin-bottom:1px;}
+  .check-desc{font-size:11px;color:var(--text-secondary);}
+  .check-score-pill{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;flex-shrink:0;margin-top:1px;}
+  .score-plus{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+  .score-zero{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+
+  /* ── Tags ── */
+  .tag-list{display:flex;flex-wrap:wrap;gap:6px;padding:12px;}
+  .tag{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:3px;border:1px solid var(--border-bright);color:var(--text-secondary);background:var(--bg-elevated);}
+  .tag.url{border-color:rgba(33,150,243,.3);color:var(--accent-blue);background:var(--accent-glow);}
+  .tag.ip{border-color:rgba(0,188,212,.3);color:var(--accent-cyan);background:rgba(0,188,212,.08);}
+  .tag.domain{border-color:rgba(234,179,8,.3);color:var(--yellow);background:var(--yellow-bg);}
+  .tag.email{border-color:rgba(249,115,22,.3);color:var(--orange);background:var(--orange-bg);}
+
+  /* ── Risk bars ── */
+  .risk-bar-wrap{display:flex;align-items:center;gap:8px;}
+  .risk-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .risk-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+  .risk-bar-label{font-family:var(--mono);font-size:10px;width:28px;text-align:right;flex-shrink:0;}
+  .attach-type{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg-elevated);border:1px solid var(--border-bright);color:var(--text-muted);text-transform:uppercase;}
+  .attach-type.critical,.attach-type.danger{background:var(--red-bg);border-color:var(--red-border);color:var(--red);}
+  .attach-type.suspicious,.attach-type.high,.attach-type.warn{background:var(--orange-bg);border-color:var(--orange-border);color:var(--orange);}
+
+  /* ── Idle ── */
+  .idle-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;text-align:center;color:var(--text-muted);}
+  .idle-state svg{width:52px;height:52px;margin-bottom:18px;stroke:var(--border-bright);fill:none;stroke-width:1;}
+  .idle-state p{font-size:13px;line-height:1.9;max-width:340px;color:var(--text-secondary);}
+  .idle-state span{font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:10px;display:block;letter-spacing:.04em;}
+
+  /* ── Score breakdown ── */
+  .score-breakdown{padding:12px;}
+  .score-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .score-row:last-child{margin-bottom:0;}
+  .score-row-label{font-size:11px;color:var(--text-secondary);width:140px;flex-shrink:0;}
+  .score-row-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .score-row-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+  .score-row-val{font-family:var(--mono);font-size:10px;color:var(--text-muted);width:28px;text-align:right;flex-shrink:0;}
+
+  /* ── Export ── */
+  .export-bar{display:flex;align-items:center;gap:8px;}
+  .btn-export{background:transparent;border:1px solid var(--border-bright);color:var(--text-secondary);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px;border-radius:3px;cursor:pointer;transition:all .15s;}
+  .btn-export:hover{border-color:var(--accent-blue);color:var(--accent-blue);}
+  .empty-msg{padding:20px;text-align:center;color:var(--text-muted);font-size:12px;font-family:var(--mono);}
+
+  /* ── History page ── */
+  .history-page{max-width:1440px;margin:0 auto;padding:24px 28px 48px;}
+  .history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .history-header h2{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--text-primary);}
+  .btn-danger{background:transparent;border:1px solid var(--red-border);color:var(--red);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:6px 14px;border-radius:3px;cursor:pointer;transition:all .15s;}
+  .btn-danger:hover{background:var(--red-bg);}
+  .history-table-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  .verdict-pill{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 8px;border-radius:3px;text-transform:uppercase;letter-spacing:.06em;}
+  .verdict-pill.PHISHING,.verdict-pill.critical{background:rgba(239,68,68,.15);color:#ff6b6b;border:1px solid rgba(239,68,68,.35);}
+  .verdict-pill.SUSPICIOUS,.verdict-pill.medium{background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-border);}
+  .verdict-pill.clean,.verdict-pill.CLEAN{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+  .verdict-pill.high,.verdict-pill.HIGH,.verdict-pill[class*="LIKELY"]{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+  .row-action{background:transparent;border:1px solid var(--border);color:var(--text-muted);font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer;}
+  .row-action:hover{border-color:var(--accent-blue);color:var(--accent-blue);}
+  .row-action.del:hover{border-color:var(--red);color:var(--red);}
+
+  /* ── Received chain ── */
+  .hop-list{display:flex;flex-direction:column;gap:0;}
+  .hop-item{padding:8px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;}
+  .hop-item:last-child{border-bottom:none;}
+  .hop-num{color:var(--accent-blue);margin-right:8px;}
+  .hop-ip{color:var(--accent-cyan);}
+  .hop-from{color:var(--text-secondary);}
+
+  /* ── Stats page ── */
+  .stats-page{max-width:1440px;margin:0 auto;padding:24px 28px 48px;}
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+  .stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:20px;}
+  .stat-card-val{font-family:var(--mono);font-size:32px;font-weight:600;color:var(--text-primary);line-height:1;}
+  .stat-card-label{font-size:12px;color:var(--text-secondary);margin-top:6px;}
+  .stat-card.red .stat-card-val{color:var(--red);}
+  .stat-card.orange .stat-card-val{color:var(--orange);}
+  .stat-card.green .stat-card-val{color:var(--green);}
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:var(--bg-base);}
+  ::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:3px;}
+
+  /* ── Loading ── */
+  .loading-overlay{position:fixed;inset:0;background:rgba(10,12,16,.8);display:flex;align-items:center;justify-content:center;z-index:999;display:none;}
+  .loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent-blue);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── Alert ── */
+  .alert{padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:11px;margin-bottom:12px;display:none;}
+  .alert.error{background:var(--red-bg);border:1px solid var(--red-border);color:var(--red);}
+  .alert.success{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);}
+  .alert.show{display:block;}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+</div>
+
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo-text"><span>Phish</span>Lens</div>
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="showPage('analyze')">ANALYZE</button>
+      <button class="nav-tab" onclick="showPage('bulk')">BULK</button>
+      <button class="nav-tab" onclick="showPage('history')">HISTORY</button>
+      <button class="nav-tab" onclick="showPage('stats')">STATS</button>
+      <button class="nav-tab" onclick="showPage('settings')">SETTINGS</button>
+    </nav>
+  </div>
+  <div class="topbar-meta">
+    <span class="topbar-status">
+      <span class="status-dot ready" id="statusDot"></span>
+      <span id="statusText">Ready</span>
+    </span>
+    <span class="backend-badge offline" id="backendBadge">OFFLINE</span>
+    <span class="version">v2.0</span>
+  </div>
+</header>
+
+<!-- ═══════════════════ ANALYZE PAGE ═══════════════════ -->
+<div class="page active" id="page-analyze">
+<main class="main">
+  <aside class="input-panel">
+    <div class="panel">
+      <div class="panel-header">
+        <svg class="panel-header-icon" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="1.5"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="9" y2="9"/></svg>
+        <span class="panel-title">Input Source</span>
+      </div>
+      <div class="panel-body">
+        <div class="alert" id="inputAlert"></div>
+        <div class="input-tabs">
+          <button class="input-tab active" onclick="switchTab('eml')">.EML FILE</button>
+          <button class="input-tab" onclick="switchTab('paste')">PASTE RAW</button>
+          <button class="input-tab" onclick="switchTab('headers')">HEADERS</button>
+        </div>
+
+        <!-- EML Upload -->
+        <div class="input-section active" id="tab-eml">
+          <div class="file-drop" id="emlDrop">
+            <input type="file" accept=".eml,.msg,.txt" id="emlInput" onchange="handleEmlFile(this)">
+            <svg class="file-drop-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p id="emlDropText">Drop .eml file here or click to browse</p>
+            <span>.eml / .msg — RFC 822 or Outlook format</span>
+          </div>
+        </div>
+
+        <!-- Paste raw -->
+        <div class="input-section" id="tab-paste">
+          <textarea id="rawInput" placeholder="Paste full email source here (headers + body)...&#10;&#10;Received: from ...&#10;From: ...&#10;Subject: ...&#10;&#10;HTML/body content..."></textarea>
+        </div>
+
+        <!-- Headers only -->
+        <div class="input-section" id="tab-headers">
+          <textarea id="headersInput" placeholder="Paste raw email headers here...&#10;&#10;From: &quot;PayPal&quot; &lt;noreply@paypa1-secure.net&gt;&#10;Authentication-Results: spf=fail; dkim=fail"></textarea>
+        </div>
+
+        <button class="btn-analyze" id="analyzeBtn" onclick="runAnalysis()">▶ PARSE EMAIL</button>
+        <button class="btn-analyze" id="fullScanBtn" onclick="runFullScan()" style="background:var(--bg-elevated);border:1px solid var(--border-bright);color:var(--text-secondary);margin-top:6px;">⚡ FULL SCAN (PARSE + OSINT + AI)</button>
+        <button class="btn-clear" onclick="clearAll()">CLEAR / RESET</button>
+      </div>
+    </div>
+
+    <div class="panel" id="breakdownPanel" style="display:none;">
+      <div class="panel-header">
+        <svg class="panel-header-icon" viewBox="0 0 16 16"><rect x="1" y="10" width="3" height="5" rx="1"/><rect x="6" y="6" width="3" height="9" rx="1"/><rect x="11" y="2" width="3" height="13" rx="1"/></svg>
+        <span class="panel-title">Score Breakdown</span>
+      </div>
+      <div class="score-breakdown" id="scoreBreakdownBody"></div>
+    </div>
+  </aside>
+
+  <section class="results-panel" id="resultsPanel">
+    <div id="idleState" class="panel">
+      <div class="idle-state">
+        <svg viewBox="0 0 52 52"><rect x="8" y="14" width="36" height="28" rx="2"/><polyline points="8 20 26 32 44 20"/><line x1="16" y1="8" x2="16" y2="14"/><line x1="26" y1="6" x2="26" y2="14"/><line x1="36" y1="8" x2="36" y2="14"/></svg>
+        <p>Upload an .eml file or paste raw email source to begin analysis.</p>
+        <span>Powered by Python backend — real parsing, real IOCs, real auth checks.</span>
+      </div>
+    </div>
+
+    <div id="resultsContent" style="display:none;">
+      <div class="summary-card">
+        <div class="summary-score-row">
+          <div class="score-circle">
+            <svg viewBox="0 0 88 88">
+              <circle class="score-circle-track" cx="44" cy="44" r="38"/>
+              <circle class="score-circle-fill" id="scoreArc" cx="44" cy="44" r="38" stroke-dasharray="238.76" stroke-dashoffset="238.76" stroke="#2196f3"/>
+            </svg>
+            <div class="score-circle-text">
+              <span class="score-number" id="scoreNum">0</span>
+              <span class="score-label">/ 100</span>
+            </div>
+          </div>
+          <div>
+            <div class="verdict-badge" id="verdictBadge">—</div>
+            <div class="verdict-title" id="verdictTitle">Awaiting Analysis</div>
+            <div class="verdict-desc" id="verdictDesc"></div>
+          </div>
+          <div class="export-bar">
+            <button class="btn-export" onclick="exportJSON()">JSON</button>
+            <button class="btn-export" onclick="exportTXT()">TXT</button>
+          </div>
+        </div>
+        <div class="summary-stats">
+          <div class="summary-stat"><div class="summary-stat-val" id="statFlags">0</div><div class="summary-stat-lbl">Indicators</div></div>
+          <div class="summary-stat"><div class="summary-stat-val" id="statLinks">0</div><div class="summary-stat-lbl">URLs Found</div></div>
+          <div class="summary-stat"><div class="summary-stat-val" id="statIOCs">0</div><div class="summary-stat-lbl">IOCs</div></div>
+          <div class="summary-stat"><div class="summary-stat-val" id="statAttach">0</div><div class="summary-stat-lbl">Attachments</div></div>
+        </div>
+      </div>
+
+      <!-- Headers + Auth -->
+      <div class="results-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <svg class="panel-header-icon" viewBox="0 0 16 16"><rect x="1" y="3" width="14" height="10" rx="1"/><polyline points="1 6 8 9 15 6"/></svg>
+            <span class="panel-title">Header Analysis</span>
+          </div>
+          <table class="data-table"><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody id="headerTableBody"><tr><td colspan="2" class="empty-msg">No data</td></tr></tbody></table>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <svg class="panel-header-icon" viewBox="0 0 16 16"><path d="M8 1l6 3v5c0 3.5-3 6-6 7C5 15 2 12.5 2 9V4z"/></svg>
+            <span class="panel-title">Authentication (SPF / DKIM / DMARC)</span>
+          </div>
+          <div class="check-list" id="authCheckList"><div class="empty-msg">No data</div></div>
+        </div>
+      </div>
+
+      <!-- URLs + IOCs -->
+      <div class="results-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <svg class="panel-header-icon" viewBox="0 0 16 16"><path d="M7 9a3 3 0 004.5.4l2-2a3 3 0 00-4.2-4.2L8 4.5"/><path d="M9 7a3 3 0 00-4.5-.4l-2 2a3 3 0 004.2 4.2L8 11.5"/></svg>
+            <span class="panel-title">URL / Link Analysis</span>
+          </div>
+          <div id="linkTableWrap"><div class="empty-msg">No links found</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <svg class="panel-header-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+            <span class="panel-title">IOC Extraction</span>
+          </div>
+          <div class="tag-list" id="iocTagList"><div class="empty-msg">No IOCs extracted</div></div>
+        </div>
+      </div>
+
+      <!-- Attachments + Indicators -->
+      <div class="results-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <svg class="panel-header-icon" viewBox="0 0 16 16"><path d="M13.5 9.5l-6 6a4 4 0 01-5.7-5.7l7-7a2.5 2.5 0 013.5 3.5l-7 7a1 1 0 01-1.4-1.4l6-6"/></svg>
+            <span class="panel-title">Attachment Analysis</span>
+          </div>
+          <div id="attachTableWrap"><div class="empty-msg">No attachments detected</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <svg class="panel-header-icon" viewBox="0 0 16 16"><path d="M8 2L2 13h12z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.5" fill="currentColor"/></svg>
+            <span class="panel-title">Phishing Indicators</span>
+          </div>
+          <div class="check-list" id="indicatorList"><div class="empty-msg">No indicators</div></div>
+        </div>
+      </div>
+
+      <!-- Received Chain + Spoof Check -->
+      <div class="results-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <svg class="panel-header-icon" viewBox="0 0 16 16"><polyline points="1 4 8 8 15 4"/><path d="M1 4v8l7 4 7-4V4"/></svg>
+            <span class="panel-title">Received Hop Chain</span>
+          </div>
+          <div id="hopListWrap"><div class="empty-msg">No hops found</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <svg class="panel-header-icon" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+            <span class="panel-title">Display Name / Spoof Check</span>
+          </div>
+          <div id="spoofCheckWrap"><div class="empty-msg">No spoof data</div></div>
+        </div>
+      </div>
+
+      <!-- Phishing Keywords -->
+      <div class="panel">
+        <div class="panel-header">
+          <svg class="panel-header-icon" viewBox="0 0 16 16"><path d="M10.5 2h-8a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V3a1 1 0 00-1-1z"/><line x1="4" y1="5" x2="9" y2="5"/><line x1="4" y1="8" x2="9" y2="8"/><line x1="4" y1="11" x2="6" y2="11"/><line x1="12" y1="8" x2="14" y2="10"/><line x1="12" y1="10" x2="14" y2="8"/></svg>
+          <span class="panel-title">Phishing Keywords Detected</span>
+        </div>
+        <div class="tag-list" id="keywordTagList"><div class="empty-msg" style="width:100%">No phishing keywords detected</div></div>
+      </div>
+
+      <!-- OSINT Panel -->
+      <div class="panel" id="osintPanel">
+        <div class="panel-header" style="justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg class="panel-header-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><line x1="8" y1="2" x2="8" y2="14"/><path d="M2 8c0-2 1.3-3.5 3-4s3-.5 3-.5 0 .5 3 .5 3 2 3 4-1.3 3.5-3 4-3 .5-3 .5-0-.5-3-.5S2 10 2 8z"/></svg>
+            <span class="panel-title">OSINT Enrichment</span>
+          </div>
+          <button class="btn-export" id="runOsintBtn" onclick="runOsint()" style="display:none;">RUN OSINT</button>
+        </div>
+        <div id="osintBody">
+          <div class="osint-placeholder">
+            <div style="padding:28px;text-align:center;">
+              <p style="color:var(--text-muted);font-size:12px;font-family:var(--mono);">Run OSINT to enrich URLs, IPs and domains with VirusTotal, AbuseIPDB, WHOIS and DNS data.</p>
+              <div id="osintServiceBadges" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:12px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Analysis Panel -->
+      <div class="panel" id="aiPanel">
+        <div class="panel-header" style="justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg class="panel-header-icon" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M5 7h6M5 10h4"/><circle cx="12" cy="3" r="2" fill="var(--accent-blue)" stroke="none"/></svg>
+            <span class="panel-title">AI Threat Analysis</span>
+            <span style="font-family:var(--mono);font-size:9px;color:var(--accent-blue);background:var(--accent-glow);border:1px solid rgba(33,150,243,0.2);padding:1px 6px;border-radius:3px;">CLAUDE</span>
+          </div>
+          <button class="btn-export" id="runAiBtn" onclick="runAi()" style="display:none;">RUN AI ANALYSIS</button>
+        </div>
+        <div id="aiBody">
+          <div style="padding:28px;text-align:center;">
+            <p style="color:var(--text-muted);font-size:12px;font-family:var(--mono);">Claude AI will analyze the full email context, generate MITRE ATT&CK mappings, attack classification, and recommended actions.</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end resultsContent -->
+  </section>
+</main>
+</div>
+
+<!-- ═══════════════════ HISTORY PAGE ═══════════════════ -->
+<div class="page" id="page-history">
+<div class="history-page">
+  <div class="history-header">
+    <h2>ANALYSIS HISTORY</h2>
+    <button class="btn-danger" onclick="clearHistory()">CLEAR ALL</button>
+  </div>
+
+  <!-- Search + Filter bar -->
+  <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
+    <div style="flex:1;position:relative;">
+      <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;stroke:var(--text-muted);fill:none;stroke-width:2;" viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
+      <input type="text" id="historySearch" placeholder="Search filename, subject, sender..."
+        oninput="filterHistory()"
+        style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:var(--mono);font-size:11px;padding:7px 10px 7px 30px;outline:none;"
+        onfocus="this.style.borderColor='var(--accent-blue)'"
+        onblur="this.style.borderColor='var(--border)'">
+    </div>
+    <select id="historyVerdictFilter" onchange="filterHistory()"
+      style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-secondary);font-family:var(--mono);font-size:11px;padding:7px 10px;outline:none;cursor:pointer;">
+      <option value="">ALL VERDICTS</option>
+      <option value="PHISHING">PHISHING</option>
+      <option value="LIKELY PHISHING">LIKELY PHISHING</option>
+      <option value="SUSPICIOUS">SUSPICIOUS</option>
+      <option value="LIKELY CLEAN">LIKELY CLEAN</option>
+    </select>
+    <select id="historyScoreFilter" onchange="filterHistory()"
+      style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-secondary);font-family:var(--mono);font-size:11px;padding:7px 10px;outline:none;cursor:pointer;">
+      <option value="">ALL SCORES</option>
+      <option value="75">Score ≥ 75 (Critical)</option>
+      <option value="50">Score ≥ 50 (High)</option>
+      <option value="25">Score ≥ 25 (Medium)</option>
+    </select>
+    <span id="historyCount" style="font-family:var(--mono);font-size:10px;color:var(--text-muted);white-space:nowrap;padding:0 4px;"></span>
+  </div>
+
+  <div class="history-table-wrap">
+    <table class="data-table" id="historyTable">
+      <thead><tr>
+        <th style="cursor:pointer;" onclick="sortHistory('id')"># ↕</th>
+        <th>Filename</th>
+        <th>Subject</th>
+        <th>From</th>
+        <th style="cursor:pointer;" onclick="sortHistory('risk_score')">Score ↕</th>
+        <th>Verdict</th>
+        <th>IOCs</th>
+        <th style="cursor:pointer;" onclick="sortHistory('date_analyzed')">Date ↕</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="historyBody">
+        <tr><td colspan="9" class="empty-msg">No analyses yet</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════ STATS PAGE ═══════════════════ -->
+<div class="page" id="page-stats">
+<div class="stats-page">
+  <div class="history-header">
+    <h2>DASHBOARD STATS</h2>
+    <button class="btn-export" onclick="loadStats()">↺ REFRESH</button>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-card-val" id="st-total">—</div><div class="stat-card-label">Total Emails Analyzed</div></div>
+    <div class="stat-card red"><div class="stat-card-val" id="st-phish">—</div><div class="stat-card-label">Phishing Detected</div></div>
+    <div class="stat-card orange"><div class="stat-card-val" id="st-susp">—</div><div class="stat-card-label">Suspicious</div></div>
+    <div class="stat-card green"><div class="stat-card-val" id="st-clean">—</div><div class="stat-card-label">Clean</div></div>
+    <div class="stat-card"><div class="stat-card-val" id="st-avg">—</div><div class="stat-card-label">Average Risk Score</div></div>
+    <div class="stat-card"><div class="stat-card-val" id="st-iocs">—</div><div class="stat-card-label">Total IOCs Extracted</div></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════ BULK PAGE ═══════════════════ -->
+<div class="page" id="page-bulk">
+<div class="history-page">
+
+  <div class="history-header">
+    <h2>BULK ANALYSIS</h2>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-export" onclick="clearBulk()">CLEAR</button>
+      <button class="btn-analyze" style="width:auto;padding:8px 20px;" id="bulkRunBtn" onclick="runBulk()">▶ ANALYZE ALL</button>
+    </div>
+  </div>
+
+  <!-- Drop zone -->
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-body">
+      <div class="file-drop" id="bulkDrop" style="min-height:120px;">
+        <input type="file" id="bulkInput" accept=".eml,.msg,.txt" multiple onchange="handleBulkFiles(this)">
+        <svg class="file-drop-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p id="bulkDropText">Drop multiple .eml files here or click to browse</p>
+        <span>Up to 50 files per batch</span>
+      </div>
+
+      <!-- File queue -->
+      <div id="bulkQueue" style="display:none;margin-top:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text-secondary);">
+            <span id="bulkQueueCount">0</span> files queued
+          </span>
+          <button class="btn-clear" style="width:auto;padding:4px 12px;font-size:10px;" onclick="clearBulk()">CLEAR QUEUE</button>
+        </div>
+        <div id="bulkFileList" style="display:flex;flex-wrap:wrap;gap:6px;max-height:100px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress bar (shown during scan) -->
+  <div id="bulkProgress" style="display:none;margin-bottom:16px;">
+    <div class="panel">
+      <div class="panel-body">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text-secondary);">Processing...</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--accent-blue);" id="bulkProgressText">0 / 0</span>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+          <div id="bulkProgressBar" style="height:100%;background:var(--accent-blue);border-radius:2px;width:0%;transition:width .3s ease;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary cards (shown after scan) -->
+  <div id="bulkSummary" style="display:none;margin-bottom:16px;">
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">
+      <div class="stat-card"><div class="stat-card-val" id="bs-total">0</div><div class="stat-card-label">Total Scanned</div></div>
+      <div class="stat-card red"><div class="stat-card-val" id="bs-phish">0</div><div class="stat-card-label">Phishing</div></div>
+      <div class="stat-card orange"><div class="stat-card-val" id="bs-susp">0</div><div class="stat-card-label">Suspicious</div></div>
+      <div class="stat-card green"><div class="stat-card-val" id="bs-clean">0</div><div class="stat-card-label">Clean</div></div>
+      <div class="stat-card"><div class="stat-card-val" id="bs-iocs">0</div><div class="stat-card-label">Total IOCs</div></div>
+    </div>
+
+    <!-- Highest risk -->
+    <div id="bs-highest" style="display:none;" class="panel" style="margin-bottom:16px;">
+      <div class="panel-header">
+        <svg class="panel-header-icon" viewBox="0 0 16 16"><path d="M8 2L2 13h12z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".5" fill="currentColor"/></svg>
+        <span class="panel-title">Highest Risk Email</span>
+      </div>
+      <div id="bs-highest-body" class="panel-body"></div>
+    </div>
+
+    <!-- Export bulk results -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="btn-export" onclick="exportBulkCSV()">EXPORT CSV</button>
+      <button class="btn-export" onclick="exportBulkJSON()">EXPORT JSON</button>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  <div id="bulkResultsWrap" style="display:none;">
+    <div class="history-table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>#</th>
+          <th>Filename</th>
+          <th>Subject</th>
+          <th>From</th>
+          <th>Score</th>
+          <th>Verdict</th>
+          <th>SPF</th>
+          <th>DKIM</th>
+          <th>IOCs</th>
+          <th>Attach</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="bulkResultsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Error table -->
+  <div id="bulkErrorsWrap" style="display:none;margin-top:12px;">
+    <div class="history-header" style="margin-bottom:8px;">
+      <span style="font-family:var(--mono);font-size:11px;color:var(--red);" id="bulkErrorTitle">ERRORS</span>
+    </div>
+    <div class="history-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Filename</th><th>Error</th></tr></thead>
+        <tbody id="bulkErrorsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════ SETTINGS PAGE ═══════════════════ -->
+<div class="page" id="page-settings">
+<div class="history-page">
+  <div class="history-header">
+    <h2>SETTINGS — API CONFIGURATION</h2>
+    <button class="btn-analyze" style="width:auto;padding:8px 20px;" onclick="saveSettings()">SAVE SETTINGS</button>
+  </div>
+  <div id="settingsAlert" class="alert" style="margin-bottom:16px;"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+    <div class="panel">
+      <div class="panel-header">
+        <svg class="panel-header-icon" viewBox="0 0 16 16"><path d="M8 1l6 3v5c0 3.5-3 6-6 7C5 15 2 12.5 2 9V4z"/></svg>
+        <span class="panel-title">OSINT API Keys</span>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:14px;">
+
+        <div>
+          <label style="display:block;font-family:var(--mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">
+            VirusTotal API Key <span id="vt-status" class="svc-dot"></span>
+          </label>
+          <input type="password" id="cfg-virustotal_api_key" placeholder="Enter VirusTotal v3 API key..." class="cfg-input">
+          <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Free tier: 4 req/min. Get at <span style="color:var(--accent-blue)">virustotal.com/gui/my-apikey</span></p>
+        </div>
+
+        <div>
+          <label style="display:block;font-family:var(--mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">
+            AbuseIPDB API Key <span id="abuse-status" class="svc-dot"></span>
+          </label>
+          <input type="password" id="cfg-abuseipdb_api_key" placeholder="Enter AbuseIPDB API key..." class="cfg-input">
+          <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Free tier: 1000 checks/day. Get at <span style="color:var(--accent-blue)">abuseipdb.com/account/api</span></p>
+        </div>
+
+        <div>
+          <label style="display:block;font-family:var(--mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">
+            URLScan.io API Key <span id="urlscan-status" class="svc-dot"></span>
+          </label>
+          <input type="password" id="cfg-urlscan_api_key" placeholder="Enter URLScan.io API key..." class="cfg-input">
+          <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Free tier available. Get at <span style="color:var(--accent-blue)">urlscan.io/user/profile</span></p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <svg class="panel-header-icon" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2"/><circle cx="12" cy="3" r="2" fill="var(--accent-blue)" stroke="none"/></svg>
+        <span class="panel-title">AI Analysis (Claude)</span>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:14px;">
+
+        <div>
+          <label style="display:block;font-family:var(--mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">
+            Anthropic API Key <span id="ai-status" class="svc-dot"></span>
+          </label>
+          <input type="password" id="cfg-anthropic_api_key" placeholder="sk-ant-api03-..." class="cfg-input">
+          <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Get at <span style="color:var(--accent-blue)">console.anthropic.com/settings/keys</span></p>
+        </div>
+
+        <div>
+          <label style="display:block;font-family:var(--mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Model</label>
+          <select id="cfg-ai_model" class="cfg-input" style="cursor:pointer;">
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (Recommended)</option>
+            <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (Faster/Cheaper)</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <svg class="panel-header-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8"/><circle cx="8" cy="11" r=".5" fill="var(--accent-blue)"/></svg>
+        <span class="panel-title">Scan Settings</span>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="display:block;font-family:var(--mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Max URLs to scan per email</label>
+          <input type="number" id="cfg-max_urls_to_scan" min="1" max="20" value="5" class="cfg-input">
+        </div>
+        <div>
+          <label style="display:block;font-family:var(--mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Max IPs to scan per email</label>
+          <input type="number" id="cfg-max_ips_to_scan" min="1" max="20" value="5" class="cfg-input">
+        </div>
+        <div>
+          <label style="display:block;font-family:var(--mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">OSINT request timeout (seconds)</label>
+          <input type="number" id="cfg-osint_timeout" min="5" max="60" value="10" class="cfg-input">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <svg class="panel-header-icon" viewBox="0 0 16 16"><polyline points="1 4 8 8 15 4"/><rect x="1" y="4" width="14" height="10" rx="1"/></svg>
+        <span class="panel-title">Config File</span>
+      </div>
+      <div class="panel-body">
+        <p style="font-size:12px;color:var(--text-secondary);line-height:1.8;margin-bottom:12px;">Settings are saved to <code style="font-family:var(--mono);color:var(--accent-cyan);font-size:11px;">phishlens_config.json</code> in the project root. You can also edit this file directly.</p>
+        <p style="font-size:11px;color:var(--text-muted);font-family:var(--mono);">API keys are stored in plaintext — keep the file secure and do not commit it to version control.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<style>
+.cfg-input{width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none;transition:border-color .15s;}
+.cfg-input:focus{border-color:var(--accent-blue);}
+.svc-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--text-muted);margin-left:4px;vertical-align:middle;}
+.svc-dot.on{background:var(--green);box-shadow:0 0 5px var(--green);}
+.svc-dot.off{background:var(--text-muted);}
+
+/* OSINT result styles */
+.osint-section{margin-bottom:16px;}
+.osint-section-title{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg-elevated);}
+.osint-row{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:11px;}
+.osint-row:last-child{border-bottom:none;}
+.osint-ioc{font-family:var(--mono);font-size:10px;color:var(--accent-cyan);flex-shrink:0;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.osint-result{flex:1;display:flex;flex-wrap:wrap;gap:6px;}
+.osint-badge{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:3px;border:1px solid var(--border);color:var(--text-muted);background:var(--bg-elevated);}
+.osint-badge.malicious{background:var(--red-bg);border-color:var(--red-border);color:var(--red);}
+.osint-badge.suspicious{background:var(--orange-bg);border-color:var(--orange-border);color:var(--orange);}
+.osint-badge.clean{background:var(--green-bg);border-color:var(--green-border);color:var(--green);}
+.osint-badge.nc{background:var(--bg-elevated);border-color:var(--border);color:var(--text-muted);}
+.osint-spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent-blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+
+/* AI result styles */
+.ai-report{padding:0;}
+.ai-section{padding:14px 16px;border-bottom:1px solid var(--border);}
+.ai-section:last-child{border-bottom:none;}
+.ai-section-label{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.ai-section-content{font-size:12px;color:var(--text-secondary);line-height:1.7;}
+.ai-verdict-row{display:flex;align-items:center;gap:12px;padding:16px;}
+.ai-ttp{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;}
+.ai-ttp-id{font-family:var(--mono);font-size:10px;color:var(--accent-blue);background:var(--accent-glow);border:1px solid rgba(33,150,243,.2);padding:2px 6px;border-radius:3px;flex-shrink:0;}
+.ai-ttp-text{font-size:11px;color:var(--text-secondary);}
+.ai-action{display:flex;gap:8px;align-items:flex-start;padding:5px 0;}
+.ai-action-num{font-family:var(--mono);font-size:10px;color:var(--accent-cyan);flex-shrink:0;}
+.ai-action-text{font-size:12px;color:var(--text-secondary);}
+.ai-confidence{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;}
+.ai-confidence.high{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+.ai-confidence.medium{background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-border);}
+.ai-confidence.low{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border);}
+</style>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+const API = '';  // same origin, served by FastAPI
+let currentResult = null;
+let emlFile = null;
+
+// ── Page navigation (Phase 3 — 5 tabs) ───────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'history') loadHistory();
+  if (name === 'stats')   loadStats();
+  if (name === 'settings') loadSettings();
+}
+
+// ── Backend health check ───────────────────────────────────────────────────────
+async function checkBackend() {
+  try {
+    const r = await fetch(API + '/health', { signal: AbortSignal.timeout(2000) });
+    if (r.ok) {
+      document.getElementById('backendBadge').textContent = 'BACKEND ONLINE';
+      document.getElementById('backendBadge').className = 'backend-badge';
+    }
+  } catch(e) {
+    document.getElementById('backendBadge').textContent = 'BACKEND OFFLINE';
+    document.getElementById('backendBadge').className = 'backend-badge offline';
+  }
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────────
+function switchTab(n) {
+  const tabs = ['eml', 'paste', 'headers'];
+  document.querySelectorAll('.input-tab').forEach((t, i) => t.classList.toggle('active', tabs[i] === n));
+  document.querySelectorAll('.input-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + n).classList.add('active');
+}
+
+function handleEmlFile(inp) {
+  const f = inp.files[0];
+  if (!f) return;
+  emlFile = f;
+  document.getElementById('emlDrop').classList.add('has-file');
+  document.getElementById('emlDropText').textContent = f.name;
+}
+
+// Drag and drop
+const emlDrop = document.getElementById('emlDrop');
+emlDrop.addEventListener('dragover', e => { e.preventDefault(); emlDrop.classList.add('dragover'); });
+emlDrop.addEventListener('dragleave', () => emlDrop.classList.remove('dragover'));
+emlDrop.addEventListener('drop', e => {
+  e.preventDefault(); emlDrop.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  emlFile = f;
+  emlDrop.classList.add('has-file');
+  document.getElementById('emlDropText').textContent = f.name;
+});
+
+function clearAll() {
+  emlFile = null;
+  currentResult = null;
+  document.getElementById('emlInput').value = '';
+  document.getElementById('rawInput').value = '';
+  document.getElementById('headersInput').value = '';
+  document.getElementById('emlDrop').classList.remove('has-file');
+  document.getElementById('emlDropText').textContent = 'Drop .eml file here or click to browse';
+  document.getElementById('idleState').style.display = '';
+  document.getElementById('resultsContent').style.display = 'none';
+  document.getElementById('breakdownPanel').style.display = 'none';
+  setStatus('ready', 'Ready');
+  hideAlert();
+}
+
+function setStatus(s, t) {
+  document.getElementById('statusDot').className = 'status-dot ' + s;
+  document.getElementById('statusText').textContent = t;
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('inputAlert');
+  el.textContent = msg;
+  el.className = 'alert ' + type + ' show';
+}
+
+function hideAlert() {
+  document.getElementById('inputAlert').className = 'alert';
+}
+
+// ── Analysis ──────────────────────────────────────────────────────────────────
+async function runAnalysis() {
+  hideAlert();
+  setStatus('scanning', 'Scanning...');
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('loadingOverlay').style.display = 'flex';
+
+  try {
+    const activeTab = document.querySelector('.input-tab.active');
+    const tabs = ['eml', 'paste', 'headers'];
+    const idx = Array.from(document.querySelectorAll('.input-tab')).indexOf(activeTab);
+    const tab = tabs[idx];
+
+    let result;
+
+    if (tab === 'eml') {
+      if (!emlFile) { showAlert('No file selected. Drop or click to select an .eml file.', 'error'); return; }
+      const fd = new FormData();
+      fd.append('file', emlFile);
+      const r = await fetch(API + '/api/analyze', { method: 'POST', body: fd });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(err.detail || 'Analysis failed');
+      }
+      result = await r.json();
+    } else {
+      const raw = tab === 'paste'
+        ? document.getElementById('rawInput').value
+        : document.getElementById('headersInput').value;
+      if (!raw.trim()) { showAlert('No email content provided.', 'error'); return; }
+      const r = await fetch(API + '/api/analyze/raw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: raw
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(err.detail || 'Analysis failed');
+      }
+      result = await r.json();
+    }
+
+    currentResult = result;
+    renderResults(result);
+    setStatus('ready', 'Analysis Complete');
+
+  } catch(e) {
+    showAlert('Error: ' + e.message, 'error');
+    setStatus('error', 'Error');
+  } finally {
+    document.getElementById('analyzeBtn').disabled = false;
+    document.getElementById('loadingOverlay').style.display = 'none';
+  }
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+function renderResults(r) {
+  document.getElementById('idleState').style.display = 'none';
+  document.getElementById('resultsContent').style.display = '';
+  document.getElementById('breakdownPanel').style.display = '';
+
+  renderScore(r);
+  renderStats(r);
+  renderHeaders(r);
+  renderAuth(r);
+  renderURLs(r);
+  renderIOCs(r);
+  renderAttachments(r);
+  renderIndicators(r);
+  renderHops(r);
+  renderSpoofCheck(r);
+  renderKeywords(r);
+  renderBreakdown(r);
+}
+
+function renderScore(r) {
+  const risk = r.risk || {};
+  const score = risk.score || 0;
+  const circ = 238.76;
+  const arc = document.getElementById('scoreArc');
+  arc.style.strokeDashoffset = circ - (score / 100) * circ;
+  const colorMap = { critical: '#ff4444', high: '#ef4444', medium: '#f97316', low: '#eab308', safe: '#22c55e' };
+  const c = colorMap[risk.verdict_color] || '#2196f3';
+  arc.style.stroke = c;
+  const n = document.getElementById('scoreNum');
+  n.textContent = score;
+  n.style.color = c;
+  const b = document.getElementById('verdictBadge');
+  b.textContent = risk.verdict || '—';
+  b.className = 'verdict-badge ' + (risk.verdict || '');
+  document.getElementById('verdictTitle').textContent = risk.verdict || '';
+  document.getElementById('verdictDesc').textContent = `Risk Score: ${score}/100`;
+}
+
+function renderStats(r) {
+  const iocs = r.iocs || {};
+  const iocCount = (iocs.urls||[]).length + (iocs.ips||[]).length + (iocs.domains||[]).length + (iocs.emails||[]).length;
+  const factors = (r.risk || {}).factors || [];
+
+  document.getElementById('statFlags').textContent = factors.length;
+  document.getElementById('statFlags').className = 'summary-stat-val ' + (factors.length > 3 ? 'red' : factors.length > 1 ? 'orange' : factors.length > 0 ? 'yellow' : 'green');
+  document.getElementById('statLinks').textContent = (r.url_analysis||[]).length;
+  document.getElementById('statIOCs').textContent = iocCount;
+  const atts = r.attachments || [];
+  document.getElementById('statAttach').textContent = atts.length;
+  document.getElementById('statAttach').className = 'summary-stat-val ' + (atts.some(a => a.risk === 'critical') ? 'red' : atts.length ? 'orange' : 'green');
+}
+
+function renderHeaders(r) {
+  const h = r.headers || {};
+  const fields = [
+    ['From', h.from], ['To', h.to], ['CC', h.cc], ['Reply-To', h.reply_to],
+    ['Subject', h.subject], ['Date', h.date], ['Message-ID', h.message_id],
+    ['X-Originating-IP', h.x_originating_ip], ['X-Mailer', h.x_mailer]
+  ].filter(([,v]) => v);
+
+  const tb = document.getElementById('headerTableBody');
+  if (!fields.length) { tb.innerHTML = '<tr><td colspan="2" class="empty-msg">No headers parsed</td></tr>'; return; }
+  tb.innerHTML = fields.map(([label, val]) => {
+    const safe = esc(val);
+    let cls = 'td-val';
+    if ((label === 'Reply-To') && h.from) {
+      const fd = (h.from.match(/@([^\s>]+)/)||[])[1]||'';
+      const td = (val.match(/@([^\s>]+)/)||[])[1]||'';
+      if (fd && td && fd.toLowerCase() !== td.toLowerCase()) cls += ' red';
+    }
+    return `<tr><td class="td-label">${label}</td><td class="${cls}" title="${safe}">${safe.length > 75 ? safe.slice(0, 75) + '…' : safe}</td></tr>`;
+  }).join('');
+}
+
+function renderAuth(r) {
+  const a = r.auth || {};
+  const pi = c => `<svg viewBox="0 0 8 8" fill="none" stroke="${c}" stroke-width="1.5"><polyline points="1.5 4 3.5 6 6.5 2"/></svg>`;
+  const fi = c => `<svg viewBox="0 0 8 8" fill="none" stroke="${c}" stroke-width="1.5"><line x1="2" y1="2" x2="6" y2="6"/><line x1="6" y1="2" x2="2" y2="6"/></svg>`;
+  const wi = c => `<svg viewBox="0 0 8 8" fill="none" stroke="${c}" stroke-width="1.5"><line x1="4" y1="1.5" x2="4" y2="5"/><circle cx="4" cy="6.5" r="0.5" fill="${c}"/></svg>`;
+
+  const checks = [
+    { name:'SPF', res: a.spf || 'none',
+      pass: a.spf === 'pass', fail: ['fail','softfail'].includes(a.spf),
+      desc: a.spf === 'pass' ? 'Sender IP authorized by domain SPF record.' :
+            a.spf === 'softfail' ? 'SPF soft-fail — sender not fully authorized.' :
+            a.spf === 'fail' ? 'SPF hard-fail — sender IP explicitly rejected.' :
+            'No SPF result found in headers.', score: a.spf==='fail'?20:a.spf==='softfail'?15:a.spf==='none'?10:0 },
+    { name:'DKIM', res: a.dkim || 'none',
+      pass: a.dkim === 'pass', fail: a.dkim === 'fail',
+      desc: a.dkim === 'pass' ? 'DKIM signature verified.' :
+            a.dkim === 'fail' ? 'DKIM signature invalid.' : 'No DKIM result found.',
+      score: a.dkim==='fail'?20:a.dkim==='none'?10:0 },
+    { name:'DMARC', res: a.dmarc || 'none',
+      pass: a.dmarc === 'pass', fail: a.dmarc === 'fail',
+      desc: a.dmarc === 'pass' ? 'DMARC policy satisfied.' :
+            a.dmarc === 'fail' ? 'DMARC policy failed.' : 'No DMARC result found.',
+      score: a.dmarc==='fail'?15:a.dmarc==='none'?5:0 }
+  ];
+
+  document.getElementById('authCheckList').innerHTML = checks.map(c => {
+    const state = c.pass ? 'pass' : c.fail ? 'fail' : 'warn';
+    const icon = c.pass ? pi('#22c55e') : c.fail ? fi('#ef4444') : wi('#eab308');
+    return `<div class="check-item">
+      <div class="check-icon ${state}">${icon}</div>
+      <div class="check-content">
+        <div class="check-name">${c.name} <span style="color:var(--text-muted);font-weight:400;font-size:10px;text-transform:uppercase;margin-left:4px;">${c.res}</span></div>
+        <div class="check-desc">${c.desc}</div>
+      </div>
+      <span class="check-score-pill ${c.score > 0 ? 'score-plus' : 'score-zero'}">${c.score > 0 ? '+' + c.score : '0'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderURLs(r) {
+  const w = document.getElementById('linkTableWrap');
+  const urls = r.url_analysis || [];
+  if (!urls.length) { w.innerHTML = '<div class="empty-msg">No URLs found</div>'; return; }
+  const color = s => s >= 60 ? '#ef4444' : s >= 40 ? '#f97316' : s >= 20 ? '#eab308' : '#22c55e';
+  w.innerHTML = `<table class="data-table"><thead><tr><th>URL</th><th>Risk</th><th>Flags</th></tr></thead><tbody>
+  ${urls.slice(0,20).map(u => {
+    const c = color(u.risk_score); const short = u.url.length > 50 ? u.url.slice(0,50)+'…' : u.url;
+    return `<tr>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;" title="${esc(u.url)}">${esc(short)}</td>
+      <td><div class="risk-bar-wrap"><div class="risk-bar"><div class="risk-bar-fill" style="width:${u.risk_score}%;background:${c}"></div></div><span class="risk-bar-label" style="color:${c}">${u.risk_score}</span></div></td>
+      <td style="font-size:10px;color:var(--text-muted);">${(u.flags||[]).join(', ')||'—'}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function renderIOCs(r) {
+  const c = document.getElementById('iocTagList');
+  const iocs = r.iocs || {};
+  const tags = [
+    ...(iocs.ips||[]).map(x => ({text:x, type:'ip'})),
+    ...(iocs.domains||[]).map(x => ({text:x, type:'domain'})),
+    ...(iocs.emails||[]).map(x => ({text:x, type:'email'})),
+    ...(iocs.urls||[]).slice(0,10).map(x => ({text:x.length>50?x.slice(0,50)+'…':x, type:'url'})),
+  ];
+  if (!tags.length) { c.innerHTML = '<div class="empty-msg">No IOCs extracted</div>'; return; }
+  c.innerHTML = tags.slice(0,60).map(t => `<span class="tag ${t.type}" title="${esc(t.text)}">${esc(t.text)}</span>`).join('');
+}
+
+function renderAttachments(r) {
+  const w = document.getElementById('attachTableWrap');
+  const atts = r.attachments || [];
+  if (!atts.length) { w.innerHTML = '<div class="empty-msg">No attachments detected</div>'; return; }
+  w.innerHTML = `<table class="data-table"><thead><tr><th>Filename</th><th>Ext</th><th>Size</th><th>Risk</th><th>SHA256</th></tr></thead><tbody>
+  ${atts.map(a => {
+    const rc = a.risk === 'critical' ? '#ef4444' : a.risk === 'high' || a.risk === 'suspicious' ? '#f97316' : '#22c55e';
+    const rl = a.risk === 'critical' ? 'DANGER' : a.risk === 'high' || a.risk === 'suspicious' ? 'CAUTION' : 'OK';
+    return `<tr>
+      <td style="font-size:11px;">${esc(a.filename)}</td>
+      <td><span class="attach-type ${a.risk}">${esc(a.extension)}</span></td>
+      <td style="color:var(--text-secondary);font-size:10px;">${a.size_human||''}</td>
+      <td style="color:${rc};font-family:var(--mono);font-size:10px;font-weight:600;">${rl}</td>
+      <td style="font-size:9px;color:var(--text-muted);word-break:break-all;" title="${a.sha256||''}">${(a.sha256||'').slice(0,16)}…</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function renderIndicators(r) {
+  const c = document.getElementById('indicatorList');
+  const factors = (r.risk || {}).factors || [];
+  if (!factors.length) {
+    c.innerHTML = `<div class="check-item"><div class="check-icon pass"><svg viewBox="0 0 8 8" fill="none" stroke="#22c55e" stroke-width="1.5"><polyline points="1.5 4 3.5 6 6.5 2"/></svg></div><div class="check-content"><div class="check-name">No Phishing Indicators Detected</div><div class="check-desc">Email passed all heuristic checks.</div></div></div>`;
+    return;
+  }
+  const sev = s => s === 'critical' ? 'var(--red)' : s === 'high' ? 'var(--red)' : s === 'medium' ? 'var(--orange)' : 'var(--yellow)';
+  c.innerHTML = factors.map(f => `<div class="check-item">
+    <div class="check-icon fail"><svg viewBox="0 0 8 8" fill="none" stroke="#ef4444" stroke-width="1.5"><line x1="2" y1="2" x2="6" y2="6"/><line x1="6" y1="2" x2="2" y2="6"/></svg></div>
+    <div class="check-content">
+      <div class="check-name">${esc(f.label)} <span style="color:${sev(f.severity||'medium')};font-size:9px;text-transform:uppercase;margin-left:6px;">${f.severity||''}</span></div>
+    </div>
+    <span class="check-score-pill score-plus">+${f.points}</span>
+  </div>`).join('');
+}
+
+function renderHops(r) {
+  const w = document.getElementById('hopListWrap');
+  const hops = r.received_chain || [];
+  if (!hops.length) { w.innerHTML = '<div class="empty-msg">No Received headers found</div>'; return; }
+  w.innerHTML = '<div class="hop-list">' + hops.map((h, i) => `
+    <div class="hop-item">
+      <span class="hop-num">#${i+1}</span>
+      ${h.ip ? `<span class="hop-ip">${esc(h.ip)}</span> ` : ''}
+      ${h.from ? `<span class="hop-from">from ${esc(h.from)}</span>` : ''}
+      ${h.by ? ` → ${esc(h.by)}` : ''}
+    </div>`).join('') + '</div>';
+}
+
+function renderSpoofCheck(r) {
+  const w = document.getElementById('spoofCheckWrap');
+  const s = r.spoof_check || {};
+  if (!s.issues || !s.issues.length) {
+    w.innerHTML = `<div class="check-item">
+      <div class="check-icon pass"><svg viewBox="0 0 8 8" fill="none" stroke="#22c55e" stroke-width="1.5"><polyline points="1.5 4 3.5 6 6.5 2"/></svg></div>
+      <div class="check-content"><div class="check-name">No Spoofing Detected</div><div class="check-desc">Display name and reply-to appear consistent.</div></div>
+    </div>`;
+    return;
+  }
+  w.innerHTML = s.issues.map(issue => `<div class="check-item">
+    <div class="check-icon fail"><svg viewBox="0 0 8 8" fill="none" stroke="#ef4444" stroke-width="1.5"><line x1="2" y1="2" x2="6" y2="6"/><line x1="6" y1="2" x2="2" y2="6"/></svg></div>
+    <div class="check-content">
+      <div class="check-name" style="color:var(--red)">${esc(issue.type.replace(/_/g,' ').toUpperCase())}</div>
+      <div class="check-desc">${esc(issue.detail)}</div>
+    </div>
+  </div>`).join('');
+}
+
+function renderKeywords(r) {
+  const c = document.getElementById('keywordTagList');
+  const kws = r.phish_keywords || [];
+  if (!kws.length) { c.innerHTML = '<div class="empty-msg" style="width:100%">No phishing keywords detected</div>'; return; }
+  c.innerHTML = kws.map(k => `<span class="tag" style="border-color:rgba(249,115,22,.3);color:var(--orange);background:var(--orange-bg);">${esc(k)}</span>`).join('');
+}
+
+function renderBreakdown(r) {
+  const b = document.getElementById('scoreBreakdownBody');
+  const risk = r.risk || {};
+  const factors = risk.factors || [];
+  const color = v => v >= 30 ? '#ef4444' : v >= 15 ? '#f97316' : v >= 5 ? '#eab308' : '#22c55e';
+  b.innerHTML = factors.map(f =>
+    `<div class="score-row"><span class="score-row-label">${esc(f.label)}</span><div class="score-row-bar"><div class="score-row-fill" style="width:${Math.min(f.points/40*100,100)}%;background:${color(f.points)}"></div></div><span class="score-row-val" style="color:${color(f.points)}">${f.points}</span></div>`
+  ).join('') + `<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
+    <div class="score-row"><span class="score-row-label" style="color:var(--text-primary);font-weight:500;">Total Risk Score</span>
+    <div class="score-row-bar"><div class="score-row-fill" style="width:${risk.score||0}%;background:${color(risk.score||0)}"></div></div>
+    <span class="score-row-val" style="color:var(--text-primary);font-weight:600;">${risk.score||0}</span></div>
+  </div>`;
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+// ── History with search / filter / sort ──────────────────────────────────────
+let _historyData = [];
+let _historySortKey = 'id';
+let _historySortDir = -1; // -1 = desc, 1 = asc
+
+async function loadHistory() {
+  try {
+    const r = await fetch(API + '/api/history?limit=500');
+    const data = await r.json();
+    _historyData = data.analyses || [];
+    renderHistoryTable();
+  } catch(e) {
+    document.getElementById('historyBody').innerHTML =
+      '<tr><td colspan="9" class="empty-msg">Failed to load history</td></tr>';
+  }
+}
+
+function filterHistory() { renderHistoryTable(); }
+
+function sortHistory(key) {
+  if (_historySortKey === key) _historySortDir *= -1;
+  else { _historySortKey = key; _historySortDir = -1; }
+  renderHistoryTable();
+}
+
+function renderHistoryTable() {
+  const search  = (document.getElementById('historySearch')?.value || '').toLowerCase();
+  const verdict = document.getElementById('historyVerdictFilter')?.value || '';
+  const minScore = parseInt(document.getElementById('historyScoreFilter')?.value || '0') || 0;
+  const tb = document.getElementById('historyBody');
+  const countEl = document.getElementById('historyCount');
+
+  let rows = _historyData.filter(a => {
+    if (verdict && !(a.verdict||'').includes(verdict)) return false;
+    if (minScore && (a.risk_score||0) < minScore) return false;
+    if (search) {
+      const hay = `${a.filename} ${a.subject} ${a.sender} ${a.verdict}`.toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  rows.sort((a, b) => {
+    const va = a[_historySortKey] ?? 0;
+    const vb = b[_historySortKey] ?? 0;
+    if (typeof va === 'string') return va.localeCompare(vb) * _historySortDir;
+    return (va - vb) * _historySortDir;
+  });
+
+  if (countEl) countEl.textContent = `${rows.length} / ${_historyData.length}`;
+
+  if (!rows.length) {
+    tb.innerHTML = `<tr><td colspan="9" class="empty-msg">${
+      search || verdict || minScore ? 'No results match filters' : 'No analyses yet'
+    }</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = rows.map(a => {
+    const vc = (a.verdict||'').includes('PHISHING') ? 'PHISHING' :
+               (a.verdict||'').includes('SUSPICIOUS') ? 'SUSPICIOUS' :
+               (a.verdict||'').includes('LIKELY') ? 'high' : 'clean';
+    const sc = a.risk_score >= 60 ? 'var(--red)' : a.risk_score >= 35 ? 'var(--orange)' : 'var(--green)';
+    // Highlight search match
+    const hi = (s) => {
+      if (!search || !s) return esc(s||'');
+      const idx = s.toLowerCase().indexOf(search);
+      if (idx === -1) return esc(s);
+      return esc(s.slice(0,idx)) +
+        `<mark style="background:rgba(33,150,243,.25);color:var(--accent-blue);border-radius:2px;">${esc(s.slice(idx, idx+search.length))}</mark>` +
+        esc(s.slice(idx+search.length));
+    };
+    return `<tr>
+      <td style="color:var(--text-muted);font-size:10px;">#${a.id}</td>
+      <td style="font-size:11px;" title="${esc(a.filename||'')}">${hi((a.filename||'').slice(0,22))}</td>
+      <td style="font-size:11px;" title="${esc(a.subject||'')}">${hi((a.subject||'—').slice(0,32))}</td>
+      <td style="font-size:10px;color:var(--text-secondary);">${hi((a.sender||'—').slice(0,26))}</td>
+      <td style="font-family:var(--mono);color:${sc};font-weight:600;">${a.risk_score}</td>
+      <td><span class="verdict-pill ${vc}">${esc(a.verdict||'—')}</span></td>
+      <td style="font-family:var(--mono);">${a.ioc_count}</td>
+      <td style="font-size:10px;color:var(--text-muted);">${(a.date_analyzed||'').slice(0,16).replace('T',' ')}</td>
+      <td style="white-space:nowrap;">
+        <button class="row-action" onclick="loadHistoryItem(${a.id})">VIEW</button>
+        <button class="row-action del" onclick="deleteItem(${a.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadHistoryItem(id) {
+  try {
+    const r = await fetch(API + '/api/history/' + id);
+    const data = await r.json();
+    currentResult = data.result_json;
+    showPage2('analyze');
+    renderResults(currentResult);
+  } catch(e) { alert('Failed to load analysis'); }
+}
+
+function showPage2(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  // tab indices: 0=analyze,1=bulk,2=history,3=stats,4=settings
+  const idx = {analyze:0,bulk:1,history:2,stats:3,settings:4};
+  const tabEl = document.querySelectorAll('.nav-tab')[idx[name]||0];
+  if (tabEl) tabEl.classList.add('active');
+}
+
+async function deleteItem(id) {
+  if (!confirm('Delete this analysis?')) return;
+  await fetch(API + '/api/history/' + id, { method: 'DELETE' });
+  loadHistory();
+}
+
+async function clearHistory() {
+  if (!confirm('Clear all history? This cannot be undone.')) return;
+  await fetch(API + '/api/history', { method: 'DELETE' });
+  loadHistory();
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch(API + '/api/stats');
+    const s = await r.json();
+    document.getElementById('st-total').textContent = s.total_analyzed;
+    document.getElementById('st-phish').textContent = s.phishing_detected;
+    document.getElementById('st-susp').textContent = s.suspicious;
+    document.getElementById('st-clean').textContent = s.clean;
+    document.getElementById('st-avg').textContent = s.avg_risk_score;
+    document.getElementById('st-iocs').textContent = s.total_iocs;
+  } catch(e) {}
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function exportJSON() {
+  if (!currentResult) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(currentResult, null, 2)], {type:'application/json'}));
+  a.download = 'phishlens_' + Date.now() + '.json';
+  a.click();
+}
+
+function exportTXT() {
+  if (!currentResult) return;
+  const r = currentResult;
+  const h = r.headers || {};
+  const risk = r.risk || {};
+  const lines = [
+    '═'.repeat(56),
+    '  PHISHLENS v2.0 — PHISHING ANALYSIS REPORT',
+    '  Generated: ' + new Date().toISOString(),
+    '═'.repeat(56), '',
+    `VERDICT:    ${risk.verdict || '—'}`,
+    `RISK SCORE: ${risk.score} / 100`, '',
+    '── HEADERS ──────────────────────────────────────────',
+    `From:     ${h.from||'—'}`, `To:       ${h.to||'—'}`,
+    `Subject:  ${h.subject||'—'}`, `Date:     ${h.date||'—'}`,
+    `Reply-To: ${h.reply_to||'—'}`, '',
+    '── AUTHENTICATION ───────────────────────────────────',
+    `SPF:   ${(r.auth||{}).spf||'none'}`,
+    `DKIM:  ${(r.auth||{}).dkim||'none'}`,
+    `DMARC: ${(r.auth||{}).dmarc||'none'}`, '',
+    '── RISK FACTORS ─────────────────────────────────────',
+    ...((risk.factors||[]).map(f => `[+${f.points}] ${f.label}`)), '',
+    '── IOCs ─────────────────────────────────────────────',
+    `IPs:     ${((r.iocs||{}).ips||[]).join(', ')||'none'}`,
+    `Domains: ${((r.iocs||{}).domains||[]).slice(0,10).join(', ')||'none'}`,
+    `Emails:  ${((r.iocs||{}).emails||[]).join(', ')||'none'}`, '',
+    '── ATTACHMENTS ──────────────────────────────────────',
+    ...((r.attachments||[]).map(a => `[${(a.risk||'').toUpperCase()}] ${a.filename} (${a.extension})`)||['None']), '',
+    '═'.repeat(56), '  END OF REPORT', '═'.repeat(56)
+  ];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type:'text/plain'}));
+  a.download = 'phishlens_report_' + Date.now() + '.txt';
+  a.click();
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Full Scan ─────────────────────────────────────────────────────────────────
+async function runFullScan() {
+  hideAlert();
+  setStatus('scanning', 'Full scan...');
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('fullScanBtn').disabled = true;
+  document.getElementById('loadingOverlay').style.display = 'flex';
+
+  try {
+    const activeTab = document.querySelector('.input-tab.active');
+    const tabs = ['eml','paste','headers'];
+    const idx = Array.from(document.querySelectorAll('.input-tab')).indexOf(activeTab);
+    const tab = tabs[idx];
+
+    let result;
+    if (tab === 'eml') {
+      if (!emlFile) { showAlert('No file selected.', 'error'); return; }
+      const fd = new FormData(); fd.append('file', emlFile);
+      const r = await fetch(API + '/api/analyze/full', { method:'POST', body:fd });
+      if (!r.ok) { const e = await r.json().catch(()=>({detail:'Unknown'})); throw new Error(e.detail); }
+      result = await r.json();
+    } else {
+      // Parse first, then run OSINT + AI separately
+      const raw = tab === 'paste' ? document.getElementById('rawInput').value : document.getElementById('headersInput').value;
+      if (!raw.trim()) { showAlert('No content.','error'); return; }
+      const r = await fetch(API + '/api/analyze/raw', { method:'POST', headers:{'Content-Type':'text/plain'}, body:raw });
+      if (!r.ok) { const e = await r.json().catch(()=>({detail:'Unknown'})); throw new Error(e.detail); }
+      result = await r.json();
+      // Now run OSINT + AI
+      const aid = result.analysis_id;
+      setStatus('scanning', 'Running OSINT...');
+      const [osintR, aiR] = await Promise.all([
+        fetch(API + '/api/osint/' + aid, {method:'POST'}),
+        fetch(API + '/api/ai/' + aid, {method:'POST'})
+      ]);
+      if (osintR.ok) { const od = await osintR.json(); result.osint = od.osint; }
+      if (aiR.ok) { const ad = await aiR.json(); result.ai_analysis = ad.ai_analysis; }
+    }
+
+    currentResult = result;
+    renderResults(result);
+    if (result.osint) renderOsint(result.osint);
+    if (result.ai_analysis) renderAI(result.ai_analysis);
+    setStatus('ready', 'Full Scan Complete');
+  } catch(e) {
+    showAlert('Error: ' + e.message, 'error');
+    setStatus('error', 'Error');
+  } finally {
+    document.getElementById('analyzeBtn').disabled = false;
+    document.getElementById('fullScanBtn').disabled = false;
+    document.getElementById('loadingOverlay').style.display = 'none';
+  }
+}
+
+// ── OSINT on demand ───────────────────────────────────────────────────────────
+async function runOsint() {
+  if (!currentResult || !currentResult.analysis_id) return;
+  const btn = document.getElementById('runOsintBtn');
+  btn.textContent = '...'; btn.disabled = true;
+  setStatus('scanning', 'Running OSINT...');
+  try {
+    const r = await fetch(API + '/api/osint/' + currentResult.analysis_id, {method:'POST'});
+    if (!r.ok) throw new Error('OSINT failed');
+    const data = await r.json();
+    currentResult.osint = data.osint;
+    renderOsint(data.osint);
+    setStatus('ready', 'OSINT Complete');
+  } catch(e) {
+    document.getElementById('osintBody').innerHTML = `<div class="empty-msg" style="color:var(--red)">OSINT error: ${esc(e.message)}</div>`;
+    setStatus('error', 'OSINT error');
+  } finally {
+    btn.textContent = 'RE-RUN OSINT'; btn.disabled = false;
+  }
+}
+
+async function runAi() {
+  if (!currentResult || !currentResult.analysis_id) return;
+  const btn = document.getElementById('runAiBtn');
+  btn.textContent = '...'; btn.disabled = true;
+  setStatus('scanning', 'Running AI analysis...');
+  try {
+    const r = await fetch(API + '/api/ai/' + currentResult.analysis_id, {method:'POST'});
+    if (!r.ok) throw new Error('AI analysis failed');
+    const data = await r.json();
+    currentResult.ai_analysis = data.ai_analysis;
+    renderAI(data.ai_analysis);
+    setStatus('ready', 'AI Analysis Complete');
+  } catch(e) {
+    document.getElementById('aiBody').innerHTML = `<div class="empty-msg" style="color:var(--red)">AI error: ${esc(e.message)}</div>`;
+    setStatus('error', 'AI error');
+  } finally {
+    btn.textContent = 'RE-RUN AI'; btn.disabled = false;
+  }
+}
+
+// ── OSINT Renderer ────────────────────────────────────────────────────────────
+function renderOsint(osint) {
+  const body = document.getElementById('osintBody');
+  const services = osint.services || {};
+  const summary = osint.summary || {};
+
+  // Summary bar
+  let sumHtml = `<div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border);">`;
+  const cells = [
+    {label:'URLs Checked', val: (osint.urls||[]).length},
+    {label:'IPs Checked',  val: (osint.ips||[]).length},
+    {label:'Domains',      val: (osint.domains||[]).length},
+    {label:'Malicious',    val: (summary.malicious_urls||0)+(summary.malicious_ips||0)+(summary.malicious_domains||0), red:true}
+  ];
+  cells.forEach(c => {
+    sumHtml += `<div style="padding:10px 14px;text-align:center;border-right:1px solid var(--border);">
+      <div style="font-family:var(--mono);font-size:18px;font-weight:600;color:${c.red&&c.val>0?'var(--red)':'var(--text-primary)'};">${c.val}</div>
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">${c.label}</div>
+    </div>`;
+  });
+  sumHtml += `</div>`;
+
+  // URLs
+  let urlHtml = '';
+  if (osint.urls && osint.urls.length) {
+    urlHtml = `<div class="osint-section-title">URL REPUTATION</div>`;
+    osint.urls.forEach(u => {
+      const vt = u.vt || {}; const us = u.urlscan || {};
+      const verdict = u.verdict || (vt.verdict) || 'unknown';
+      const short = (u.url||'').length > 60 ? (u.url||'').slice(0,60)+'…' : (u.url||'');
+      urlHtml += `<div class="osint-row">
+        <span class="osint-ioc" title="${esc(u.url)}">${esc(short)}</span>
+        <div class="osint-result">
+          ${vt.status==='ok' ? `<span class="osint-badge ${vt.verdict||'nc'}">VT: ${vt.malicious||0}/${vt.total_engines||0} malicious</span>` : vt.status==='not_configured' ? `<span class="osint-badge nc">VT: not configured</span>` : ''}
+          ${us.status==='ok' ? `<a href="${esc(us.result_url||'')}" target="_blank" class="osint-badge clean" style="text-decoration:none;">URLScan: submitted</a>` : us.status==='not_configured' ? `<span class="osint-badge nc">URLScan: not configured</span>` : ''}
+          <span class="osint-badge ${verdict}">${verdict.toUpperCase()}</span>
+        </div>
+      </div>`;
+    });
+  }
+
+  // IPs
+  let ipHtml = '';
+  if (osint.ips && osint.ips.length) {
+    ipHtml = `<div class="osint-section-title">IP REPUTATION</div>`;
+    osint.ips.forEach(ip => {
+      const vt = ip.vt || {}; const ab = ip.abuseipdb || {};
+      ipHtml += `<div class="osint-row">
+        <span class="osint-ioc">${esc(ip.ip)}</span>
+        <div class="osint-result">
+          ${vt.status==='ok' ? `<span class="osint-badge ${vt.verdict||'nc'}">VT: ${vt.malicious||0}/${vt.total_engines||0}</span>` : vt.status==='not_configured' ? `<span class="osint-badge nc">VT: not configured</span>` : ''}
+          ${ab.status==='ok' ? `<span class="osint-badge ${ab.abuse_score>=80?'malicious':ab.abuse_score>=25?'suspicious':'clean'}">AbuseIPDB: ${ab.abuse_score}% ${ab.country?'('+ab.country+')':''}</span>` : ab.status==='not_configured' ? `<span class="osint-badge nc">AbuseIPDB: not configured</span>` : ''}
+          ${ab.status==='ok'&&ab.isp ? `<span class="osint-badge nc">${esc(ab.isp)}</span>` : ''}
+          ${ab.status==='ok'&&ab.is_tor ? `<span class="osint-badge malicious">TOR EXIT NODE</span>` : ''}
+        </div>
+      </div>`;
+    });
+  }
+
+  // Domains
+  let domHtml = '';
+  if (osint.domains && osint.domains.length) {
+    domHtml = `<div class="osint-section-title">DOMAIN INTELLIGENCE</div>`;
+    osint.domains.forEach(d => {
+      const vt = d.vt || {}; const wh = d.whois || {}; const dns = d.dns || {};
+      const wdata = wh.status==='ok' ? wh : {};
+      domHtml += `<div class="osint-row">
+        <span class="osint-ioc">${esc(d.domain)}</span>
+        <div class="osint-result">
+          ${vt.status==='ok' ? `<span class="osint-badge ${vt.verdict||'nc'}">VT: ${vt.malicious||0}/${vt.total_engines||0}</span>` : ''}
+          ${wdata.registrar ? `<span class="osint-badge nc">Registrar: ${esc(wdata.registrar)}</span>` : ''}
+          ${wdata.age_days!=null ? `<span class="osint-badge ${wdata.recently_registered?'suspicious':'nc'}">Age: ${wdata.age_days}d ${wdata.recently_registered?'(NEWLY REG!)':''}</span>` : ''}
+          ${wdata.registrant_country ? `<span class="osint-badge nc">${esc(wdata.registrant_country)}</span>` : ''}
+          ${dns.status==='ok'&&dns.records&&dns.records.A ? `<span class="osint-badge nc">A: ${(dns.records.A||[]).slice(0,2).join(', ')}</span>` : ''}
+          ${dns.status==='ok'&&dns.records&&!dns.records.spf_record ? `<span class="osint-badge suspicious">No SPF</span>` : ''}
+        </div>
+      </div>`;
+    });
+  }
+
+  body.innerHTML = sumHtml +
+    `<div style="overflow-x:auto;">` +
+    (urlHtml ? `<div class="osint-section">${urlHtml}</div>` : '') +
+    (ipHtml  ? `<div class="osint-section">${ipHtml}</div>`  : '') +
+    (domHtml ? `<div class="osint-section">${domHtml}</div>` : '') +
+    (!urlHtml && !ipHtml && !domHtml ? `<div class="empty-msg">No IOCs to enrich — no URLs, IPs or domains found in this email.</div>` : '') +
+    `</div>`;
+
+  document.getElementById('runOsintBtn').textContent = 'RE-RUN OSINT';
+  document.getElementById('runOsintBtn').style.display = '';
+}
+
+// ── AI Renderer ───────────────────────────────────────────────────────────────
+function renderAI(ai) {
+  const body = document.getElementById('aiBody');
+
+  if (!ai || ai.status === 'not_configured') {
+    body.innerHTML = `<div style="padding:24px;text-align:center;">
+      <p style="color:var(--text-muted);font-size:12px;font-family:var(--mono);margin-bottom:12px;">Anthropic API key not configured.</p>
+      <button class="btn-export" onclick="showSettingsPage()">CONFIGURE IN SETTINGS</button>
+    </div>`;
+    document.getElementById('runAiBtn').style.display = '';
+    return;
+  }
+
+  if (ai.status === 'error') {
+    body.innerHTML = `<div class="empty-msg" style="color:var(--red);padding:16px;">AI Error: ${esc(ai.message||'Unknown error')}</div>`;
+    document.getElementById('runAiBtn').style.display = '';
+    return;
+  }
+
+  const confClass = ai.confidence === 'high' ? 'high' : ai.confidence === 'medium' ? 'medium' : 'low';
+  const verdictColor = (ai.risk_verdict||'').includes('PHISHING') ? 'var(--red)' :
+                       (ai.risk_verdict||'').includes('SUSPICIOUS') ? 'var(--orange)' : 'var(--green)';
+
+  const ttpsHtml = (ai.ttps||[]).map(t =>
+    `<div class="ai-ttp"><span class="ai-ttp-id">${esc(t.id||'')}</span><span class="ai-ttp-text"><strong style="color:var(--text-primary)">${esc(t.technique||'')}</strong> — ${esc(t.detail||'')}</span></div>`
+  ).join('') || '<span style="color:var(--text-muted);font-size:11px;">No TTPs mapped</span>';
+
+  const actionsHtml = (ai.recommended_actions||[]).map((a,i) =>
+    `<div class="ai-action"><span class="ai-action-num">${i+1}.</span><span class="ai-action-text">${esc(a)}</span></div>`
+  ).join('');
+
+  const huntHtml = (ai.hunting_queries||[]).map(q =>
+    `<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:3px;padding:8px 10px;font-family:var(--mono);font-size:10px;color:var(--accent-cyan);margin-bottom:6px;">${esc(q)}</div>`
+  ).join('');
+
+  body.innerHTML = `<div class="ai-report">
+    <div class="ai-verdict-row" style="border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:600;color:${verdictColor};margin-bottom:4px;">${esc(ai.risk_verdict||'—')}</div>
+        <div style="font-size:11px;color:var(--text-secondary);">${esc(ai.attack_type||'').replace(/_/g,' ').toUpperCase()}${ai.target_brand?' — '+esc(ai.target_brand):''}</div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        ${ai.targeted?`<span style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);">TARGETED</span>`:''}
+        <span class="ai-confidence ${confClass}">CONFIDENCE: ${(ai.confidence||'').toUpperCase()}</span>
+        ${ai.model?`<span style="font-family:var(--mono);font-size:9px;color:var(--text-muted);">via ${esc(ai.model)}</span>`:''}
+      </div>
+    </div>
+    <div class="ai-section"><div class="ai-section-label">Threat Summary</div><div class="ai-section-content">${esc(ai.threat_summary||'—')}</div></div>
+    <div class="ai-section"><div class="ai-section-label">Attack Objective</div><div class="ai-section-content">${esc(ai.attack_objective||'—')}</div></div>
+    <div class="ai-section"><div class="ai-section-label">Infrastructure Analysis</div><div class="ai-section-content">${esc(ai.infrastructure_analysis||'—')}</div></div>
+    <div class="ai-section"><div class="ai-section-label">Social Engineering Tactics</div><div class="ai-section-content">${esc(ai.social_engineering||'—')}</div></div>
+    <div class="ai-section"><div class="ai-section-label">MITRE ATT&CK TTPs</div>${ttpsHtml}</div>
+    <div class="ai-section"><div class="ai-section-label">Risk Justification</div><div class="ai-section-content">${esc(ai.risk_justification||'—')}</div></div>
+    ${actionsHtml?`<div class="ai-section"><div class="ai-section-label">Recommended Actions</div>${actionsHtml}</div>`:''}
+    ${huntHtml?`<div class="ai-section"><div class="ai-section-label">Threat Hunting Queries</div>${huntHtml}</div>`:''}
+  </div>`;
+
+  document.getElementById('runAiBtn').textContent = 'RE-RUN AI';
+  document.getElementById('runAiBtn').style.display = '';
+}
+
+function showSettingsPage() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-settings').classList.add('active');
+  document.querySelectorAll('.nav-tab')[4].classList.add('active');
+  loadSettings();
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+async function loadSettings() {
+  try {
+    const r = await fetch(API + '/api/config');
+    if (!r.ok) return;
+    const cfg = await r.json();
+    const configured = cfg.configured || {};
+
+    // Set dot indicators
+    const dots = {vt: configured.virustotal, abuse: configured.abuseipdb, urlscan: configured.urlscan, ai: configured.anthropic};
+    for (const [id, on] of Object.entries(dots)) {
+      const el = document.getElementById(id+'-status');
+      if (el) el.className = 'svc-dot ' + (on ? 'on' : 'off');
+    }
+
+    // Fill inputs (keys are masked)
+    const fields = ['virustotal_api_key','abuseipdb_api_key','urlscan_api_key','anthropic_api_key','ai_model','max_urls_to_scan','max_ips_to_scan','osint_timeout'];
+    fields.forEach(k => {
+      const el = document.getElementById('cfg-' + k);
+      if (el && cfg[k] !== undefined) el.value = cfg[k];
+    });
+  } catch(e) {}
+}
+
+async function saveSettings() {
+  const fields = ['virustotal_api_key','abuseipdb_api_key','urlscan_api_key','anthropic_api_key','ai_model','max_urls_to_scan','max_ips_to_scan','osint_timeout'];
+  const body = {};
+  fields.forEach(k => {
+    const el = document.getElementById('cfg-' + k);
+    if (el) body[k] = el.type === 'number' ? parseInt(el.value) : el.value;
+  });
+
+  try {
+    const r = await fetch(API + '/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const data = await r.json();
+    if (data.status === 'ok') {
+      const al = document.getElementById('settingsAlert');
+      al.className = 'alert success show'; al.textContent = 'Settings saved successfully.';
+      setTimeout(() => al.className = 'alert', 3000);
+      loadSettings();
+      checkBackend();
+    }
+  } catch(e) {
+    const al = document.getElementById('settingsAlert');
+    al.className = 'alert error show'; al.textContent = 'Failed to save settings: ' + e.message;
+  }
+}
+
+// ── Update renderResults to show OSINT/AI buttons and handle cached data ──────
+const _origRenderResults = renderResults;
+function renderResults(r) {
+  _origRenderResults(r);
+  // Show OSINT + AI run buttons after parse
+  document.getElementById('runOsintBtn').style.display = '';
+  document.getElementById('runAiBtn').style.display = '';
+
+  // Render service badges in OSINT placeholder
+  checkBackend().then && renderOsintServiceBadges();
+
+  // If result already has OSINT/AI (from Full Scan or history load)
+  if (r.osint) renderOsint(r.osint);
+  if (r.ai_analysis) renderAI(r.ai_analysis);
+}
+
+async function renderOsintServiceBadges() {
+  try {
+    const r = await fetch(API + '/health');
+    const data = await r.json();
+    const services = data.services || {};
+    const container = document.getElementById('osintServiceBadges');
+    if (!container) return;
+    const map = {virustotal:'VirusTotal', abuseipdb:'AbuseIPDB', urlscan:'URLScan.io', anthropic:'Claude AI'};
+    container.innerHTML = Object.entries(map).map(([k,label]) =>
+      `<span class="osint-badge ${services[k]?'clean':'nc'}">${label}: ${services[k]?'READY':'NOT CONFIGURED'}</span>`
+    ).join('');
+  } catch(e) {}
+}
+
+// ── Stats update for Phase 2 ──────────────────────────────────────────────────
+const _origLoadStats = loadStats;
+async function loadStats() {
+  await _origLoadStats();
+  // patch extra fields
+  try {
+    const r = await fetch(API + '/api/stats');
+    const s = await r.json();
+    // Update any extra stat fields if they exist in the DOM
+    ['osint_enriched','ai_analyzed'].forEach(k => {
+      const el = document.getElementById('st-'+k.replace('_','-'));
+      if (el && s[k] !== undefined) el.textContent = s[k];
+    });
+  } catch(e) {}
+}
+
+// ── Bulk Analysis ─────────────────────────────────────────────────────────────
+let bulkFiles = [];
+let bulkResults = null;
+
+// Drag and drop for bulk
+const bulkDrop = document.getElementById('bulkDrop');
+bulkDrop.addEventListener('dragover', e => { e.preventDefault(); bulkDrop.classList.add('dragover'); });
+bulkDrop.addEventListener('dragleave', () => bulkDrop.classList.remove('dragover'));
+bulkDrop.addEventListener('drop', e => {
+  e.preventDefault(); bulkDrop.classList.remove('dragover');
+  const files = Array.from(e.dataTransfer.files).filter(f =>
+    f.name.endsWith('.eml') || f.name.endsWith('.txt'));
+  if (files.length) addBulkFiles(files);
+});
+
+function handleBulkFiles(inp) {
+  addBulkFiles(Array.from(inp.files));
+}
+
+function addBulkFiles(files) {
+  // Deduplicate by name
+  const existing = new Set(bulkFiles.map(f => f.name));
+  const added = files.filter(f => !existing.has(f.name));
+  bulkFiles = [...bulkFiles, ...added];
+  renderBulkQueue();
+}
+
+function renderBulkQueue() {
+  const q = document.getElementById('bulkQueue');
+  const list = document.getElementById('bulkFileList');
+  const count = document.getElementById('bulkQueueCount');
+  const dropText = document.getElementById('bulkDropText');
+
+  if (!bulkFiles.length) {
+    q.style.display = 'none';
+    bulkDrop.classList.remove('has-file');
+    dropText.textContent = 'Drop multiple .eml files here or click to browse';
+    return;
+  }
+
+  q.style.display = '';
+  bulkDrop.classList.add('has-file');
+  count.textContent = bulkFiles.length;
+  dropText.textContent = `${bulkFiles.length} file${bulkFiles.length>1?'s':''} queued`;
+
+  list.innerHTML = bulkFiles.slice(0, 30).map((f, i) =>
+    `<span class="tag" style="cursor:default;">
+      ${esc(f.name.length > 25 ? f.name.slice(0,25)+'…' : f.name)}
+      <span onclick="removeBulkFile(${i})" style="color:var(--text-muted);cursor:pointer;margin-left:4px;">✕</span>
+    </span>`
+  ).join('') + (bulkFiles.length > 30
+    ? `<span class="tag" style="color:var(--text-muted);">+${bulkFiles.length-30} more</span>` : '');
+}
+
+function removeBulkFile(idx) {
+  bulkFiles.splice(idx, 1);
+  renderBulkQueue();
+}
+
+function clearBulk() {
+  bulkFiles = [];
+  bulkResults = null;
+  document.getElementById('bulkInput').value = '';
+  document.getElementById('bulkSummary').style.display = 'none';
+  document.getElementById('bulkResultsWrap').style.display = 'none';
+  document.getElementById('bulkErrorsWrap').style.display = 'none';
+  document.getElementById('bulkProgress').style.display = 'none';
+  renderBulkQueue();
+}
+
+async function runBulk() {
+  if (!bulkFiles.length) return;
+  if (bulkFiles.length > 50) {
+    alert('Max 50 files per batch. Remove some files and try again.');
+    return;
+  }
+
+  const btn = document.getElementById('bulkRunBtn');
+  btn.disabled = true;
+  btn.textContent = 'Scanning...';
+
+  // Show progress
+  document.getElementById('bulkProgress').style.display = '';
+  document.getElementById('bulkSummary').style.display = 'none';
+  document.getElementById('bulkResultsWrap').style.display = 'none';
+  document.getElementById('bulkErrorsWrap').style.display = 'none';
+  setStatus('scanning', `Bulk scan: 0/${bulkFiles.length}`);
+
+  const BATCH = 5;
+  const allResults = [];
+  const allErrors = [];
+
+  try {
+    for (let i = 0; i < bulkFiles.length; i += BATCH) {
+      const batch = bulkFiles.slice(i, i + BATCH);
+      const fd = new FormData();
+      batch.forEach(f => fd.append('files', f));
+
+      const r = await fetch(API + '/api/analyze/bulk', { method: 'POST', body: fd });
+      if (!r.ok) throw new Error(`Batch failed: ${r.status}`);
+      const data = await r.json();
+
+      allResults.push(...(data.results || []));
+      allErrors.push(...(data.error_details || []));
+
+      const done = Math.min(i + BATCH, bulkFiles.length);
+      const pct = Math.round(done / bulkFiles.length * 100);
+      document.getElementById('bulkProgressBar').style.width = pct + '%';
+      document.getElementById('bulkProgressText').textContent = `${done} / ${bulkFiles.length}`;
+      setStatus('scanning', `Bulk scan: ${done}/${bulkFiles.length}`);
+    }
+
+    bulkResults = { results: allResults, errors: allErrors };
+    renderBulkResults(allResults, allErrors);
+    setStatus('ready', `Bulk scan complete — ${allResults.length} files`);
+
+  } catch(e) {
+    setStatus('error', 'Bulk scan error');
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ ANALYZE ALL';
+    document.getElementById('bulkProgress').style.display = 'none';
+  }
+}
+
+function renderBulkResults(results, errors) {
+  if (!results.length && !errors.length) return;
+
+  // Summary
+  const phishing   = results.filter(r => (r.verdict||'').includes('PHISHING')).length;
+  const suspicious = results.filter(r => r.verdict === 'SUSPICIOUS').length;
+  const clean      = results.length - phishing - suspicious;
+  const totalIocs  = results.reduce((s, r) => s + (r.ioc_count||0), 0);
+  const highest    = results.reduce((a, b) => (b.risk_score > (a?.risk_score||0) ? b : a), null);
+
+  document.getElementById('bs-total').textContent = results.length;
+  document.getElementById('bs-phish').textContent = phishing;
+  document.getElementById('bs-susp').textContent  = suspicious;
+  document.getElementById('bs-clean').textContent = clean;
+  document.getElementById('bs-iocs').textContent  = totalIocs;
+  document.getElementById('bulkSummary').style.display = '';
+
+  // Highest risk callout
+  if (highest && highest.risk_score >= 50) {
+    const hb = document.getElementById('bs-highest');
+    const hbody = document.getElementById('bs-highest-body');
+    hb.style.display = '';
+    const vc = colorForScore(highest.risk_score);
+    hbody.innerHTML = `<div style="display:flex;align-items:center;gap:16px;">
+      <div style="font-family:var(--mono);font-size:28px;font-weight:600;color:${vc};">${highest.risk_score}</div>
+      <div>
+        <div style="font-weight:500;margin-bottom:2px;">${esc(highest.filename||'')}</div>
+        <div style="font-size:12px;color:var(--text-secondary);">${esc(highest.subject||'—')}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${esc(highest.sender||'')}</div>
+      </div>
+      <div style="margin-left:auto;">
+        <span class="verdict-pill ${(highest.verdict||'').includes('PHISHING')?'PHISHING':'SUSPICIOUS'}">${esc(highest.verdict||'')}</span>
+      </div>
+      ${highest.analysis_id ? `<button class="row-action" onclick="viewBulkItem(${highest.analysis_id})">VIEW FULL REPORT</button>` : ''}
+    </div>`;
+  }
+
+  // Results table
+  const tbody = document.getElementById('bulkResultsBody');
+  tbody.innerHTML = results.map((r, i) => {
+    const vc  = colorForScore(r.risk_score);
+    const vclass = (r.verdict||'').includes('PHISHING') ? 'PHISHING' :
+                   r.verdict === 'SUSPICIOUS' ? 'SUSPICIOUS' :
+                   (r.verdict||'').includes('LIKELY') ? 'high' : 'clean';
+    const authDot = v => `<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:${
+      v==='pass'?'var(--green-bg)':v==='fail'||v==='softfail'?'var(--red-bg)':'var(--bg-elevated)'};color:${
+      v==='pass'?'var(--green)':v==='fail'||v==='softfail'?'var(--red)':'var(--text-muted)'};border:1px solid ${
+      v==='pass'?'var(--green-border)':v==='fail'||v==='softfail'?'var(--red-border)':'var(--border)'};">${v||'?'}</span>`;
+    return `<tr>
+      <td style="color:var(--text-muted);font-size:10px;">${i+1}</td>
+      <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.filename||'')}">${esc(r.filename||'')}</td>
+      <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.subject||'')}">${esc((r.subject||'—').slice(0,40))}</td>
+      <td style="font-size:10px;color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc((r.sender||'—').slice(0,30))}</td>
+      <td style="font-family:var(--mono);color:${vc};font-weight:600;">${r.risk_score}</td>
+      <td><span class="verdict-pill ${vclass}">${esc(r.verdict||'—')}</span></td>
+      <td>${authDot(r.spf)}</td>
+      <td>${authDot(r.dkim)}</td>
+      <td style="font-family:var(--mono);font-size:11px;">${r.ioc_count||0}</td>
+      <td style="font-family:var(--mono);font-size:11px;${r.attachment_count?'color:var(--orange)':''}">${r.attachment_count||0}</td>
+      <td>${r.analysis_id ? `<button class="row-action" onclick="viewBulkItem(${r.analysis_id})">VIEW</button>` : ''}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="11" class="empty-msg">No results</td></tr>';
+
+  document.getElementById('bulkResultsWrap').style.display = '';
+
+  // Errors
+  if (errors.length) {
+    document.getElementById('bulkErrorTitle').textContent = `ERRORS (${errors.length})`;
+    document.getElementById('bulkErrorsBody').innerHTML = errors.map(e =>
+      `<tr><td style="font-family:var(--mono);font-size:11px;">${esc(e.filename||'?')}</td><td style="color:var(--red);font-size:11px;">${esc(e.error||'Unknown error')}</td></tr>`
+    ).join('');
+    document.getElementById('bulkErrorsWrap').style.display = '';
+  }
+}
+
+function colorForScore(s) {
+  return s >= 75 ? 'var(--red)' : s >= 50 ? 'var(--orange)' : s >= 25 ? 'var(--yellow)' : 'var(--green)';
+}
+
+function viewBulkItem(aid) {
+  loadHistoryItem(aid);
+  showPage2('analyze');
+}
+
+function exportBulkCSV() {
+  if (!bulkResults) return;
+  const rows = [
+    ['#','Filename','Subject','Sender','Risk Score','Verdict','SPF','DKIM','DMARC','IOCs','Attachments','Spoofed'],
+    ...bulkResults.results.map((r,i) => [
+      i+1, r.filename, r.subject, r.sender, r.risk_score, r.verdict,
+      r.spf, r.dkim, r.dmarc, r.ioc_count, r.attachment_count,
+      r.spoofed ? 'YES' : 'NO'
+    ])
+  ];
+  const csv = rows.map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = `phishlens_bulk_${Date.now()}.csv`;
+  a.click();
+}
+
+function exportBulkJSON() {
+  if (!bulkResults) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(bulkResults, null, 2)], {type:'application/json'}));
+  a.download = `phishlens_bulk_${Date.now()}.json`;
+  a.click();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+checkBackend();
+setInterval(checkBackend, 10000);
+</script>
+</body>
+</html>
+HTMLEOF
