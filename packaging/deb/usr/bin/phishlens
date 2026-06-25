@@ -1,0 +1,17 @@
+#!/bin/bash
+# PhishLens launcher
+INSTALL_DIR="/usr/share/phishlens"
+VENV_PYTHON="$INSTALL_DIR/venv/bin/python"
+
+# Fallback to system python3 if venv missing
+if [ ! -f "$VENV_PYTHON" ]; then
+    VENV_PYTHON="python3"
+fi
+
+# Config and DB stored in user's home
+DATA_DIR="$HOME/.local/share/phishlens"
+mkdir -p "$DATA_DIR"
+
+exec "$VENV_PYTHON" "$INSTALL_DIR/run.py" \
+    --data-dir "$DATA_DIR" \
+    "$@"

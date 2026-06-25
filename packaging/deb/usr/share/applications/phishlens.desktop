@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=2.0
+Type=Application
+Name=PhishLens
+GenericName=Phishing Email Analyzer
+Comment=Advanced phishing email analysis tool
+Exec=phishlens
+Icon=phishlens
+Terminal=false
+StartupNotify=true
+Categories=Network;Security;
+Keywords=phishing;email;security;analysis;osint;

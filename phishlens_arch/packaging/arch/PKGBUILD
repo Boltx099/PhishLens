@@ -1,0 +1,94 @@
+# Maintainer: Boltx <boltx@phishlens.local>
+pkgname=phishlens
+pkgver=2.0.0
+pkgrel=1
+pkgdesc="Advanced Phishing Email Analyzer — Burp Suite-style local tool for phishing investigation"
+arch=('any')
+url="https://github.com/boltx/phishlens"
+license=('MIT')
+depends=('python>=3.8' 'python-pip')
+optdepends=(
+    'python-fastapi: web framework (auto-installed to venv)'
+    'python-uvicorn: ASGI server (auto-installed to venv)'
+)
+backup=()
+install=phishlens.install
+
+# ── Source ─────────────────────────────────────────────────────────────────────
+# When building from local source (build_pkg.sh copies files here):
+source=("phishlens-${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+# ── Build ──────────────────────────────────────────────────────────────────────
+# Nothing to compile — pure Python project
+build() {
+    :
+}
+
+# ── Package ────────────────────────────────────────────────────────────────────
+package() {
+    cd "$srcdir/phishlens-${pkgver}"
+
+    local INSTALL_DIR="$pkgdir/usr/share/phishlens"
+    local BIN_DIR="$pkgdir/usr/bin"
+    local APPS_DIR="$pkgdir/usr/share/applications"
+    local ICONS_DIR="$pkgdir/usr/share/icons/hicolor/256x256/apps"
+
+    # ── App files ──────────────────────────────────────────────────────────────
+    install -dm755 "$INSTALL_DIR/backend"
+    install -dm755 "$INSTALL_DIR/frontend"
+    install -dm755 "$INSTALL_DIR/assets"
+
+    install -m644 run.py             "$INSTALL_DIR/"
+    install -m644 requirements.txt   "$INSTALL_DIR/"
+
+    install -m644 backend/main.py        "$INSTALL_DIR/backend/"
+    install -m644 backend/parser.py      "$INSTALL_DIR/backend/"
+    install -m644 backend/osint.py       "$INSTALL_DIR/backend/"
+    install -m644 backend/ai_analysis.py "$INSTALL_DIR/backend/"
+    install -m644 backend/config.py      "$INSTALL_DIR/backend/"
+
+    install -m644 frontend/index.html "$INSTALL_DIR/frontend/"
+
+    # Assets (logo files)
+    [ -f assets/logo.png ]      && install -m644 assets/logo.png      "$INSTALL_DIR/assets/"
+    [ -f assets/logo_dark.jpg ] && install -m644 assets/logo_dark.jpg "$INSTALL_DIR/assets/"
+
+    # ── Launcher ───────────────────────────────────────────────────────────────
+    install -dm755 "$BIN_DIR"
+    install -m755 /dev/stdin "$BIN_DIR/phishlens" << 'EOF'
+#!/bin/bash
+INSTALL_DIR="/usr/share/phishlens"
+VENV_PYTHON="$INSTALL_DIR/venv/bin/python"
+
+if [ ! -f "$VENV_PYTHON" ]; then
+    VENV_PYTHON="python3"
+fi
+
+DATA_DIR="${PHISHLENS_DATA_DIR:-$HOME/.local/share/phishlens}"
+mkdir -p "$DATA_DIR"
+
+exec "$VENV_PYTHON" "$INSTALL_DIR/run.py" --data-dir "$DATA_DIR" "$@"
+EOF
+
+    # ── Desktop entry ──────────────────────────────────────────────────────────
+    install -dm755 "$APPS_DIR"
+    install -m644 /dev/stdin "$APPS_DIR/phishlens.desktop" << 'EOF'
+[Desktop Entry]
+Version=2.0
+Type=Application
+Name=PhishLens
+GenericName=Phishing Email Analyzer
+Comment=Advanced phishing email analysis tool
+Exec=phishlens
+Icon=phishlens
+Terminal=false
+StartupNotify=true
+Categories=Network;Security;
+Keywords=phishing;email;security;analysis;osint;
+EOF
+
+    # ── Icon ───────────────────────────────────────────────────────────────────
+    install -dm755 "$ICONS_DIR"
+    [ -f assets/logo.png ] && install -m644 assets/logo.png "$ICONS_DIR/phishlens.png"
+}

@@ -1,0 +1,27 @@
+# Secrets / local data — never commit
+phishlens_config.json
+.phishlens_token
+phishlens.db
+phishlens.db-journal
+*.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Build artifacts
+dist/
+build/
+*.deb
+*.AppImage
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp

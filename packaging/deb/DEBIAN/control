@@ -1,0 +1,13 @@
+Package: phishlens
+Version: 2.0.0
+Section: net
+Priority: optional
+Architecture: amd64
+Depends: python3 (>= 3.8), python3-pip
+Maintainer: Boltx <boltx@phishlens.local>
+Description: PhishLens - Advanced Phishing Email Analyzer
+ A Burp Suite-style local tool for analyzing phishing emails.
+ Features: email parsing, SPF/DKIM/DMARC checks, IOC extraction,
+ VirusTotal/AbuseIPDB integration, Claude AI analysis, bulk scanning.
+ Runs a local web server accessible at http://127.0.0.1:7331
+Installed-Size: 228

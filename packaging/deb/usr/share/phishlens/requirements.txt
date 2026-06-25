@@ -1,0 +1,20 @@
+# PhishLens v2.0 — Python Dependencies
+
+# Web framework
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+
+# Email parsing
+mail-parser>=3.15.0
+extract-msg>=0.48.0
+
+# DNS & WHOIS
+dnspython>=2.6.0
+python-whois>=0.9.0
+
+# Async HTTP (OSINT integrations)
+aiohttp>=3.9.0
+
+# HTTP (general use)
+requests>=2.31.0
