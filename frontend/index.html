@@ -288,6 +288,250 @@ html,body{height:100%;overflow:hidden;background:#0b1120;color:#e2e8f0;font-fami
       drop-shadow(0 0 40px rgba(37,99,235,0.25));
   }
 
+/* ── MOBILE RESPONSIVE ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* App: vertical stack instead of horizontal flex */
+  .app {
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Sidebar becomes a fixed bottom nav bar */
+  .sidebar {
+    width: 100% !important;
+    min-width: unset !important;
+    height: 56px !important;
+    min-height: 56px;
+    flex-direction: row !important;
+    overflow: hidden !important;
+    border-right: none !important;
+    border-top: 1px solid #1e2d45 !important;
+    order: 2;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 0;
+  }
+
+  /* Hide logo, collapse button, status, version in mobile nav */
+  .sidebar .sb-logo,
+  .sidebar .sb-bottom,
+  .sidebar .sb-section,
+  #sidebarToggleBtn,
+  .sidebar .sb-status,
+  .logo-3d-wrap,
+  .sb-logomark,
+  .resize-handle {
+    display: none !important;
+  }
+
+  /* Nav buttons: horizontal row */
+  .sb-nav {
+    flex-direction: row !important;
+    width: 100%;
+    padding: 0 !important;
+    gap: 0 !important;
+    align-items: stretch;
+    justify-content: space-around;
+  }
+
+  .nav-btn {
+    flex: 1;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 6px 4px !important;
+    gap: 3px !important;
+    font-size: 10px !important;
+    height: 56px;
+    border-radius: 0 !important;
+    min-height: 44px;
+  }
+
+  .nav-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .nav-label {
+    display: block !important;
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  /* Collapsed state has no effect on mobile */
+  .sidebar.collapsed {
+    width: 100% !important;
+  }
+  .sidebar.collapsed .nav-label,
+  .sidebar.collapsed .sb-section,
+  .sidebar.collapsed .sb-status-text {
+    display: block !important;
+  }
+  .sidebar.collapsed .nav-btn {
+    justify-content: center !important;
+    padding: 6px 4px !important;
+  }
+
+  /* Main takes remaining height above bottom nav */
+  .main {
+    flex: 1;
+    height: calc(100vh - 56px) !important;
+    overflow: hidden;
+    order: 1;
+    margin-bottom: 56px;
+  }
+
+  /* Topbar: compact */
+  .topbar {
+    height: 48px !important;
+    padding: 0 12px !important;
+    gap: 8px !important;
+  }
+
+  .topbar-crumb { display: none; }
+
+  .topbar-title {
+    font-size: 13px !important;
+  }
+
+  .backend-badge, .ver-badge {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+  }
+
+  .btn-newscan {
+    padding: 5px 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* Analyze layout: vertical split */
+  .analyze-layout {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    height: calc(100vh - 48px - 56px) !important;
+  }
+
+  /* Left panel: full width, auto height */
+  .left-panel {
+    width: 100% !important;
+    min-width: unset !important;
+    flex-shrink: 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid #1e2d45;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Right panel: auto */
+  .right-panel {
+    flex: none !important;
+    min-height: 400px;
+    overflow: visible !important;
+  }
+
+  .rp-body {
+    overflow: visible !important;
+    padding: 12px !important;
+  }
+
+  /* Score card and IOC list: full width */
+  .score-card {
+    margin: 10px 12px 0 !important;
+  }
+
+  .ioc-section {
+    padding: 10px 12px !important;
+  }
+
+  /* Drop zone: shorter on mobile */
+  .drop-zone {
+    min-height: 80px !important;
+    padding: 14px !important;
+  }
+
+  /* Textarea: reasonable height */
+  .raw-textarea, .header-textarea {
+    height: 80px !important;
+  }
+
+  /* Buttons: full width, touch-friendly */
+  .btn-parse, .btn-fullscan {
+    padding: 12px 14px !important;
+    min-height: 44px;
+  }
+
+  /* Act buttons section */
+  .act-btns {
+    padding: 0 12px !important;
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* History page */
+  .page-body {
+    padding: 12px !important;
+    overflow-y: auto;
+  }
+
+  /* History table: horizontal scroll */
+  .hist-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Settings inputs: full width */
+  .settings-input {
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  /* AI card */
+  .ai-card-body {
+    font-size: 12px !important;
+  }
+
+  /* Finding cards */
+  .fc-body {
+    font-size: 12px !important;
+  }
+
+  /* Toast: full width on mobile */
+  .toast {
+    right: 12px !important;
+    left: 12px !important;
+    max-width: unset !important;
+  }
+
+  /* Idle state */
+  .idle-state {
+    padding: 24px !important;
+  }
+
+  /* Bulk page */
+  #page-bulk .page-body {
+    overflow-y: auto;
+  }
+}
+
+/* Extra small phones */
+@media (max-width: 380px) {
+  .nav-btn { font-size: 9px !important; }
+  .nav-label { display: none !important; }
+  .nav-btn svg { width: 22px !important; height: 22px !important; }
+  .topbar-title { font-size: 12px !important; }
+}
+
 </style>
 </head>
 <body>
