@@ -21,6 +21,14 @@
 
 ---
 
+<a href="https://web-production-a717fa.up.railway.app/">
+  <img src="https://img.shields.io/badge/LIVE%20DEMO%20→%20Click%20Here-ONLINE-red?style=for-the-badge"/>
+</a>
+
+Paste a raw email (`.eml` / headers) to analyze for phishing indicators.  
+API keys (VirusTotal, AbuseIPDB, Anthropic) can be configured via the Settings tab.
+
+---
 <p align="center">
   <img src="assets/slides/slide_ui_mockup.jpg" alt="PhishLens UI — risk score, IOC list, AI verdict" width="100%"/>
 </p>
