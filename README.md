@@ -226,6 +226,13 @@ bash packaging/build_deb.sh
 sudo dpkg -i dist/phishlens_2.0.0_amd64.deb
 phishlens
 ```
+### Arch Linux
+```bash
+cd phishlens_arch
+bash packaging/build_pkg.sh
+sudo pacman -U dist/phishlens-*.pkg.tar.zst
+phishlens
+```
 
 ### AppImage — Any Linux x86_64 (no install needed)
 ```bash
